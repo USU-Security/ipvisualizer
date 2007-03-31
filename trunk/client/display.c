@@ -10,7 +10,7 @@
 #include <GL/glu.h>
 #include <sys/time.h>
 #include <pthread.h>
-#include "flowdata.h"
+#include "../shared/flowdata.h"
 #include <sys/socket.h>
 #include <netinet/in.h>
 #include <stdio.h>
@@ -45,7 +45,7 @@ int SHOW_OUT = 1;
 int mapping = 0;
 const char moviefile[] = "output.avi";
 /* TODO: get rid of this hack */
-#include "subnetpassword.h"
+#include "../subnetpassword.h"
 
 struct timeval inittime;
 volatile int die=0;

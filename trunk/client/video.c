@@ -9,7 +9,7 @@
 #include <ffmpeg/avcodec.h>
 #include <ffmpeg/avformat.h>
 #include <string.h>
-#include "flowdata.h"
+#include "../shared/flowdata.h"
 #include "video.h"
 
 /* store our global data in here */

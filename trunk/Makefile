@@ -1,20 +1,26 @@
-all: server client
+COMMON=../shared
 
-INCLUDES = flowdata.h mygettime.h structs.h
-CC = gcc -c -g
-LINK = gcc
+all: display flowserv
 
-%.o: %.c $(INCLUDES)
-	$(CC) $<
+display:
+	make COMMON=$(COMMON) -C client -f Makefile display
+	[ -f client/display ] && cp -f client/display .
 
-server: flowserv.o flowdata.h flowdata.o
-	$(LINK) -lpcap flowserv.o flowdata.o -o flowserv
+flowserv:
+	make COMMON=$(COMMON) -C server -f Makefile
+	[ -f server/flowserv ] && cp -f server/flowserv .
 
-client: display.o video.o flowdata.o  subnets.o flowdata.h video.h subnets.h
-	$(LINK) display.o video.o flowdata.o subnets.o -lGL -lGLU -lglut -lpthread -lavcodec -lavformat -o display
+clean:
+	make -C client -f Makefile clean
+	make -C server -f Makefile clean
+	make -C shared -f Makefile clean
 
-clean: 
-	rm -f *.o
+distclean: clean
+	make -C client -f Makefile distclean
+	make -C server -f Makefile distclean
+	make -C shared -f Makefile distclean
+	rm -f display flowserv
 
-squeakyclean: clean
-	rm -f flowserv display *.avi
+.PHONY: clean distclean display flowserv all
+
+

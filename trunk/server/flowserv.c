@@ -31,7 +31,7 @@
 #define SNAPLEN 80
 
 /* MAXINDEX has meaning in here... */
-#include "flowdata.h"
+#include "../shared/flowdata.h"
 
 #define T_IP 0x0800
 #define T_TCP 6
