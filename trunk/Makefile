@@ -1,13 +1,15 @@
+CFLAGS=-g -Wall -Wextra -pedantic
+
 COMMON=../shared
 
 all: display flowserv
 
 display:
-	make COMMON=$(COMMON) -C client -f Makefile display
+	make COMMON=$(COMMON) CFLAGS="$(CFLAGS)" -C client -f Makefile display
 	[ -f client/display ] && cp -f client/display .
 
 flowserv:
-	make COMMON=$(COMMON) -C server -f Makefile
+	make COMMON=$(COMMON) CFLAGS="$(CFLAGS)" -C server -f Makefile
 	[ -f server/flowserv ] && cp -f server/flowserv .
 
 clean:
