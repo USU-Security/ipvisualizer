@@ -20,6 +20,7 @@
 #include <netdb.h>
 #include "video.h"
 #include "subnets.h"
+#include <unistd.h>
 
 #define IMGWIDTH 1024
 #define IMGHEIGHT 1024
@@ -44,15 +45,13 @@ int SHOW_IN = 1;
 int SHOW_OUT = 1;
 int mapping = 0;
 const char moviefile[] = "output.avi";
-/* TODO: get rid of this hack */
-#include "../subnetpassword.h"
 
 struct timeval inittime;
 volatile int die=0;
 volatile int dead=0;
 pthread_mutex_t imglock = PTHREAD_MUTEX_INITIALIZER;
 
-unsigned char imgdata[IMGWIDTH*IMGHEIGHT][COLORDEPTH] = {0};
+unsigned char imgdata[IMGWIDTH*IMGHEIGHT][COLORDEPTH] = {{0}};
 
 int width, height;
 float scalex, scaley;
@@ -92,9 +91,7 @@ int main(int argc, char** argv)
 	/* computing the forward mapping from the reverse mapping */
 	for (i = 0; i < 65536; i++)
 		forwardmap[reversemap[i]] = i;
-	/* grab the list of subnets */
-	numsubnets = getsubnets(subnets, MAXSUBNETS, "thingy.usu.edu", "/private/cgi-bin/subnetlist.pl", subnetauthorization);
-	printf("loaded %i subnets\n", numsubnets);
+	
 	glEnable(GL_BLEND);
 	glEnable(GL_TEXTURE_2D);
 	gettimeofday(&inittime, 0);
@@ -121,7 +118,7 @@ int main(int argc, char** argv)
 	/* start up our thread that listens for data */
 	int e;
 	pthread_t pid;
-	if (e = pthread_create(&pid, NULL, collect_data, NULL))
+	if ((e = pthread_create(&pid, NULL, collect_data, NULL)))
 		printf("Error while creating thread: %s", strerror(e));
 	else 
 		glutMainLoop();
@@ -142,21 +139,31 @@ void displaymsg(const char* s)
 
 /*
  * function:	pulldata()
- * purpose:		to let the server know if we want more data
+ * purpose:		to let the server know if we want more data. on first call, will also request subnets
  * recieves:	whether to start the data (1), or stop the data(0)
  */
 void pulldata(char start)
 {
 	static int sock = 0;
-	if (!sock)
-		sock = socket(AF_INET, SOCK_DGRAM, 0);
-	struct flowrequest fr;
-	fr.flowon = start;
+	struct packetheader ph;
+	struct flowrequest* fr = (struct flowrequeset*)ph.data;
+	
+	fr->flowon = start;
 	struct sockaddr_in sin;
 	sin.sin_family = AF_INET;
 	sin.sin_port = htons(PORT);
 	sin.sin_addr.s_addr = serverip;
-	sendto(sock, &fr, sizeof(fr), 0, (struct sockaddr*)&sin, sizeof(sin));
+	ph.version = VERSION;
+	if (!sock)
+	{
+		ph.packettype = PKT_SUBNET;
+		sock = socket(AF_INET, SOCK_DGRAM, 0);
+		sendto(sock, &ph, SIZEOF_PACKETHEADER, 0, (struct sockaddr*)&sin, sizeof(sin));
+		printf("requesting subnet data\n");
+		//the response will come... later
+	}
+	ph.packettype = PKT_FLOW;
+	sendto(sock, &ph, sizeof(fr) + SIZEOF_PACKETHEADER, 0, (struct sockaddr*)&sin, sizeof(sin));
 }
 
 void videoon(char b)
@@ -396,13 +403,13 @@ void outlinesubnets()
 				if (t == ALLOCATED)
 					lineleft(i, j, 128,128,128);
 				else
-					lineleft(i, j, 16,16,0);
+					lineleft(i, j, 32,32,0);
 			}
 			if (!comparenets(subnets, numsubnets, ip, ipup, &t)) {
 				if (t == ALLOCATED) 
 					lineup(i, j, 128,128,128);
 				else
-					lineup(i, j, 16,16,0);
+					lineup(i, j, 32,32,0);
 			}
 		}
 	}
@@ -418,7 +425,7 @@ void outlinesubnets()
 			if (t == ALLOCATED) 
 				lineleft(i, j, 128,128,128);
 			else
-				lineleft(i, j, 16,16,0);
+				lineleft(i, j, 32,32,0);
 		}
 	}
 	for (j = 1; j < MAPHEIGHT; j++)
@@ -433,7 +440,7 @@ void outlinesubnets()
 			if (t == ALLOCATED) 
 				lineup(i, j, 128,128,128);
 			else
-				lineup(i, j, 16, 16, 0);
+				lineup(i, j, 32, 32, 0);
 		}
 	}
 }
@@ -623,6 +630,65 @@ inline unsigned char getpixel(int w, unsigned char c, char in)
 }
 
 /*
+ * function:	update_image()
+ * purpose:		to update the image according to a given flowpacket
+ * recieves:	the flow packet
+ */
+void update_image(struct flowpacket* fp) 
+{
+	int i;
+	int max = fp->count;
+	if (max > MAXINDEX)
+		max = MAXINDEX; /* watch those externally induced overflows */
+	/* lock it up */
+	pthread_mutex_lock(&imglock);
+	for (i = 0; i < max; i++)
+	{
+		if (fp->data[i].incoming && !SHOW_IN)
+			continue;
+		if (!fp->data[i].incoming && !SHOW_OUT)
+			continue;
+
+		int pixel = mappixel(fp->data[i].ip);
+
+		unsigned char b = getpixel(pixel, fp->data[i].packet, fp->data[i].incoming);
+		/*
+		   printf("jumping pixel for ip 129.123.%i.%i\n",
+		   (fp.data[i].ip & 0x0000ff00) >> 8,
+		   fp.data[i].ip & 0x000000ff);
+		   */
+		if (b < 255 - JUMPRATE) /* don't overflow */
+			setpixel(pixel, fp->data[i].packet, getpixel(pixel, fp->data[i].packet, fp->data[i].incoming) + JUMPRATE, fp->data[i].incoming);
+		else
+			setpixel(pixel, fp->data[i].packet, 255, fp->data[i].incoming);
+	}
+	pthread_mutex_unlock(&imglock);
+	/* unlock it */
+
+}
+
+/*
+ * function:	updatesubnets()
+ * purpose:		to update our list of subnets
+ * recieves:	a poitner to a subnetpacket
+ */
+void updatesubnets(struct subnetpacket* sp)
+{
+	int i;
+	int max = sp->count>MAXINDEX ? MAXINDEX : sp->count;
+	numsubnets = max;
+	printf("Recived information about %i subnets\n", numsubnets); 
+	for (i = 0; i < numsubnets; i++)
+	{
+		subnets[i].base = sp->subnets[i].base + NETBASE;
+		subnets[i].mask = sp->subnets[i].mask;
+	}
+	/* redraw the subnet stuff */
+	outlinesubnets();
+
+}
+
+/*
  * function:	collect_data()
  * purpose:		collects data to draw. this is a separate thread because i didn't
  * 				want to use glut callback foo to do this, its too risky.
@@ -655,39 +721,22 @@ void* collect_data(void* p)
 		return 0;
 	}
 
-	struct flowpacket fp;
-
+	struct packetheader ph;
+	int i;
 	while (!die)
 	{
-		read(s, &fp, sizeof(fp));
-		int i;
-		int max = fp.count;
-		if (max > MAXINDEX)
-			max = MAXINDEX; /* watch those externally induced overflows */
-		/* lock it up */
-		pthread_mutex_lock(&imglock);
-		for (i = 0; i < max; i++)
+		read(s, &ph, sizeof(ph));
+		switch (ph.packettype)
 		{
-			if (fp.data[i].incoming && !SHOW_IN)
-				continue;
-			if (!fp.data[i].incoming && !SHOW_OUT)
-				continue;
-
-			int pixel = mappixel(fp.data[i].ip);
-
-			unsigned char b = getpixel(pixel, fp.data[i].packet, fp.data[i].incoming);
-			/*
-			printf("jumping pixel for ip 129.123.%i.%i\n",
-				(fp.data[i].ip & 0x0000ff00) >> 8,
-				 fp.data[i].ip & 0x000000ff);
-			*/
-			if (b < 255 - JUMPRATE) /* don't overflow */
-				setpixel(pixel, fp.data[i].packet, getpixel(pixel, fp.data[i].packet, fp.data[i].incoming) + JUMPRATE, fp.data[i].incoming);
-			else
-				setpixel(pixel, fp.data[i].packet, 255, fp.data[i].incoming);
-		}
-		pthread_mutex_unlock(&imglock);
-		/* unlock it */
+		case PKT_FLOW:	
+			update_image((struct flowpacket*)ph.data);
+			break;
+		case PKT_SUBNET:
+			updatesubnets((struct subnetpacket*)ph.data);
+			break;
+		default:
+			printf("Recieved garbage packet of type %i (0x%2X)\n", (unsigned int)ph.packettype, (unsigned int)ph.packettype);
+		}		
 	}
 	dead = 1;
 	return 0;

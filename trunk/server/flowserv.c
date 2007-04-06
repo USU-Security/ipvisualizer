@@ -20,6 +20,10 @@
 #include <string.h>
 #include <errno.h>
 #include <time.h>
+#include <unistd.h>
+#include "../subnetpassword.h"
+#include "../shared/flowdata.h"
+#include "subnets.h"
 
 /* the minimum elapsed time between packets, in milliseconds. this corresponds
  * to a sustainable 24 frames per second */
@@ -30,8 +34,7 @@
 /* the snaplen. 80 bytes should be sufficient */
 #define SNAPLEN 80
 
-/* MAXINDEX has meaning in here... */
-#include "../shared/flowdata.h"
+
 
 #define T_IP 0x0800
 #define T_TCP 6
@@ -39,8 +42,11 @@
 
 
 unsigned long long lastupdate = 0;
-struct flowpacket buffer;
 
+struct packetheader flowbuffer;
+struct flowpacket *buffer;
+struct subnetpacket* subnets;
+struct packetheader cachedsubnets;
 unsigned int clients[MAXCLIENTS] = {0};
 unsigned int timeouts[MAXCLIENTS] = {0};
 int sendsock;
@@ -63,14 +69,14 @@ inline void flushbuffer() {
 			if (timeouts[i] < time(0)) {
 				delclient(clients[i]);
 			} else {
-				//int len = write(sock[i], &buffer, flowpacketsize(&buffer));
 				sin.sin_addr.s_addr = clients[i];
-				int len = sendto(sendsock, &buffer, flowpacketsize(&buffer), 0, 
-								(struct sockaddr*)&sin, sizeof(sin));
+				int len = sendto(sendsock, &flowbuffer, 
+						flowpacketsize(buffer) + SIZEOF_PACKETHEADER, 
+						0, (struct sockaddr*)&sin, sizeof(sin));
 
 				if (len < 0) {
 					printf("error writing %i bytes: %s\n",
-						flowpacketsize(&buffer),
+						flowpacketsize(buffer) + SIZEOF_PACKETHEADER, 
 						strerror(errno));
 				} else {
 				}
@@ -79,7 +85,7 @@ inline void flushbuffer() {
 	}
 	
 	lastupdate = gettime();
-	buffer.count = 0;
+	buffer->count = 0;
 }
 
 /*
@@ -91,24 +97,29 @@ inline void flushbuffer() {
 void report(unsigned int src, unsigned int dst, unsigned short size, enum packettype pt) {
 	if ((src & NETMASK) == NETBASE)
 	{
-		buffer.data[buffer.count].incoming = 0;
-		buffer.data[buffer.count].ip = src & ~NETMASK;
+		buffer->data[buffer->count].incoming = 0;
+		buffer->data[buffer->count].ip = src & ~NETMASK;
 	}
 	else if ((dst & NETMASK) == NETBASE)
 	{
-		buffer.data[buffer.count].incoming = 1;
-		buffer.data[buffer.count].ip = dst & ~NETMASK;
+		buffer->data[buffer->count].incoming = 1;
+		buffer->data[buffer->count].ip = dst & ~NETMASK;
 	}
-	buffer.data[buffer.count].packet = (unsigned int)pt;
-	buffer.data[buffer.count].packetsize = size;
+	else 
+	{
+		/* ignore the packet */
+		return;
+	}
+	buffer->data[buffer->count].packet = (unsigned int)pt;
+	buffer->data[buffer->count].packetsize = size;
 /*
 	printf("saw flow from xx.xx.%i.%i\n",
 		(buffer.data[buffer.count].ip & 0x0000ff00) >> 8,
 		 buffer.data[buffer.count].ip & 0x000000ff);
 */
 
-	buffer.count++;
-	if (buffer.count >= MAXINDEX || lastupdate + MINRATE < gettime())
+	buffer->count++;
+	if (buffer->count >= MAXINDEX || lastupdate + MINRATE < gettime())
 		flushbuffer();
 }
 
@@ -126,7 +137,7 @@ int addclient(unsigned int ip)
 		if (clients[i] == ip)
 		{
 			timeouts[i] = time(0) + TIMEOUT;
-			break;
+			return 1;
 		}
 		else if (!clients[i])
 		{
@@ -134,9 +145,10 @@ int addclient(unsigned int ip)
 			clients[i] = ip;
 			timeouts[i] = time(0) + TIMEOUT; 
 			numclients++;
-			break;
+			return 1;
 		} 
 	}
+	return 0;
 }
 
 /*
@@ -167,8 +179,6 @@ void delclient(unsigned int ip)
  */
 int initnetworkbyhost(const char* host)
 {
-	int s;
-
 	/* see if we have room */
 	if (numclients >= MAXCLIENTS)
 		return 0;
@@ -216,23 +226,39 @@ int srvlisten()
 void checklisten(int listen)
 {
 	struct sockaddr_in addr;
-	struct flowrequest fr;
+	struct flowrequest *fr;
+	struct subnetpacket* sp;
+	struct packetheader ph;
 	addr.sin_family = AF_INET;
 	addr.sin_port = htons(PORT);
 	addr.sin_addr.s_addr = INADDR_ANY;
 	socklen_t fromlen = sizeof(addr);
 	int err;
-	if ((err = recvfrom(listen, &fr, sizeof(fr), MSG_DONTWAIT, 
+	if ((err = recvfrom(listen, &ph, sizeof(ph), MSG_DONTWAIT, 
 		(struct sockaddr*)&addr, &fromlen)) > 0)
 	{
-		if (fr.flowon) 
-			addclient(addr.sin_addr.s_addr);
-		else 
-			delclient(addr.sin_addr.s_addr);
+		switch (ph.packettype)
+		{
+		case PKT_FLOW:
+			fr = (struct flowrequest*)ph.data;
+			if (fr->flowon) 
+				addclient(addr.sin_addr.s_addr);
+			else 
+				delclient(addr.sin_addr.s_addr);
+			break;
+		case PKT_SUBNET:
+			printf("Recieved a subnet request\n");
+			sp = (struct subnetpacket*)ph.data;
+			subnets->requestnum = sp->requestnum;
+			addr.sin_port = htons(PORT);
+			sendto(listen, &cachedsubnets, subnetpacketsize(subnets) + SIZEOF_PACKETHEADER, 0, (struct sockaddr*)&addr, fromlen);
+			printf("Sent subnet information\n");
+			break;
+		}
 	}
 	else 
 	{
-		printf("\t%s\n", strerror(errno));
+	/*	printf("\t%s\n", strerror(errno)); */
 	}
 }
 
@@ -242,16 +268,30 @@ void checklisten(int listen)
  */
 int main(int argc, char* argv[])
 {
-	char packetbuffer[SNAPLEN];
 	char ebuff[PCAP_ERRBUF_SIZE];
-
+	subnet subarray[MAXINDEX];
+	int i;
+	subnets = (struct subnetpacket*)cachedsubnets.data;
+	cachedsubnets.version = VERSION;
+	cachedsubnets.packettype = PKT_SUBNET;
 	if (argc < 2) {
 		fprintf(stderr, "usage: %s <network-device> [hostname+]\n", argv[0]);
 		return 1;
 	}
+	int numsubnets = getsubnets(subarray, MAXINDEX, "thingy.usu.edu", "/private/cgi-bin/subnetlist.pl", subnetauthorization);
+	if (numsubnets > MAXINDEX) 
+		numsubnets = MAXINDEX;
+	for (i = 0; i < numsubnets; i++) {
+		subnets->subnets[i].base = subarray[i].base & ~NETMASK;
+		subnets->subnets[i].mask = subarray[i].mask;
+	}
+	subnets->count = numsubnets;
+	printf("Recieved information about %i subnets\n", numsubnets);
+
+	/* set up our buffers */
+	buffer = (struct flowpacket*)flowbuffer.data;
 
 	/* open up the sockets */
-	int i;
 	for (i = 2; i < argc; i++) 
 	{
 		if (!initnetworkbyhost(argv[i]))
