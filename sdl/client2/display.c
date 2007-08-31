@@ -61,8 +61,11 @@ const char* rules[65536] = {0};
 #define DISPLAYFADE .05
 struct t_displaytext 
 {
-	char log[DISPLAYLINES][DISPLAYWIDTH];
+	char log[DISPLAYLINES][DISPLAYWIDTH+30];
 	float brightness[DISPLAYLINES];
+	int dup[DISPLAYLINES];
+	int dir[DISPLAYLINES];
+	int scroll;
 	int which;
 } displaytext;
 
@@ -81,7 +84,7 @@ unsigned short rev_netblock(unsigned short);
 void update_menubar();
 inline unsigned short mappixel(unsigned short ip);
 void sdl_eventloop();
-void printdisplay(const char* s);
+void printdisplay(const char* s, unsigned short ip);
 
 /**
  * Where execution begins. Duh.
@@ -105,6 +108,7 @@ int main(int argc, char** argv)
 	{
 		memset(&displaytext.log[i][0], 0, DISPLAYWIDTH);
 		displaytext.brightness[i] = 0;
+		displaytext.dup[i] = 0;
 	}
 	displaytext.which = DISPLAYLINES-1;
 
@@ -123,9 +127,9 @@ int main(int argc, char** argv)
 	
 	//screen = SDL_SetVideoMode(512, 512, 32, SDL_RESIZABLE|SDL_OPENGL);
 	//screen = SDL_SetVideoMode(modes[0]->w, modes[0]->h, 32,       SDL_FULLSCREEN|SDL_DOUBLEBUF|SDL_HWSURFACE|SDL_OPENGL);
-	printdisplay("Hello gentle users");
-	printdisplay("Wecome to this program");
-	printdisplay("enjoy this message, which is cluttering your screen");
+	printdisplay("Hello gentle users",0);
+	printdisplay("Wecome to this program",0);
+	printdisplay("enjoy this message, which is cluttering your screen",0);
 
 	if (!screen) 
 	{
@@ -688,12 +692,38 @@ inline void renderstring(const char* s, float color)
 	glPopClientAttrib();
 }
 
-void printdisplay(const char* s)
+void printdisplay(const char* s, unsigned short ip)
 {
-	displaytext.which--;
-	displaytext.which = (displaytext.which + DISPLAYLINES) % DISPLAYLINES;
-	strncpy(displaytext.log[displaytext.which], s, DISPLAYWIDTH-1);
+	/* check for duplicate lines */
+	if (0 == strncmp(displaytext.log[displaytext.which], s, strlen(s)))
+	{
+		displaytext.dup[displaytext.which]++;
+		if(ip != 0) 
+			snprintf(displaytext.log[displaytext.which], DISPLAYWIDTH+29, "%s (129.123.%d.%d) (%d)", s, ip & 255, ip >> 8, displaytext.dup[displaytext.which]);
+		else 
+			snprintf(displaytext.log[displaytext.which], DISPLAYWIDTH+29, "%s (%d)", s, displaytext.dup[displaytext.which]);
+	}
+	else
+	{
+		displaytext.which--;
+		displaytext.which = (displaytext.which + DISPLAYLINES) % DISPLAYLINES;
+		strncpy(displaytext.log[displaytext.which], s, DISPLAYWIDTH-1);
+		if(ip != 0) 
+			snprintf(displaytext.log[displaytext.which], DISPLAYWIDTH+19, "%s (129.123.%d.%d)", s, ip & 255, ip >> 8);
+		else 
+			snprintf(displaytext.log[displaytext.which], DISPLAYWIDTH+19, "%s", s);
+
+		displaytext.dup[displaytext.which] = 1;
+		displaytext.scroll=15;
+		/* check to see if its an outbound rule */
+		if (strstr(s, "em0")) 
+			displaytext.dir[displaytext.which] = 1;
+		else
+			displaytext.dir[displaytext.which] = 0;
+			
+	}
 	displaytext.brightness[displaytext.which] = .75;
+	
 }
 
 /*
@@ -710,18 +740,29 @@ void drawdisplaytext()
 	{
 		if (displaytext.brightness[(i + displaytext.which) % DISPLAYLINES] > .01)
 		{
-			displaytext.brightness[(i + displaytext.which) % DISPLAYLINES] -= DISPLAYFADE;
-			float color = displaytext.brightness[(i+displaytext.which)%DISPLAYLINES];
-			glColor3f(color,color,color);
+			if (displaytext.dir[(i + displaytext.which) % DISPLAYLINES]) 
+			{
+				displaytext.brightness[(i + displaytext.which) % DISPLAYLINES] -= DISPLAYFADE * .5;
+				float color = displaytext.brightness[(i+displaytext.which)%DISPLAYLINES];
+				glColor3f(color*1.3,0,0);
+			}
+			else
+			{
+				displaytext.brightness[(i + displaytext.which) % DISPLAYLINES] -= DISPLAYFADE;
+				float color = displaytext.brightness[(i+displaytext.which)%DISPLAYLINES];
+				glColor3f(color,color,color);
+			}
 			/* figure out which direction to do this */
 			if (displayy < 100)
-				glRasterPos2i(0, (i+1)*15);
+				glRasterPos2i(0, (i+2)*15 - displaytext.scroll);
 			else
-				glRasterPos2i(0, (IMGHEIGHT - 30) - (i ) * 15);
+				glRasterPos2i(0, (IMGHEIGHT - 30) - (i-1 ) * 15 + displaytext.scroll);
 			//glRasterPos2i(0, IMGHEIGHT - 13 - i*13);
 			renderstring(displaytext.log[(i+displaytext.which)%DISPLAYLINES], 1);
 		}
 	}
+	if (displaytext.scroll)
+		displaytext.scroll-=5;
 }
 
 /*
@@ -835,8 +876,9 @@ void update_firewall(struct fwflowpacket* fp)
 		   */
 		datapointdrop(&pointdata[pixel], 192);
 		pointdata[pixel].msg = rules[fp->data[i].rule];
+		char buffer[256];
 		if (rules[fp->data[i].rule]) 
-			printdisplay(rules[fp->data[i].rule]);
+			printdisplay(rules[fp->data[i].rule], fp->data[i].ip);
 	}
 	pthread_mutex_unlock(&imglock);
 	/* unlock it */
