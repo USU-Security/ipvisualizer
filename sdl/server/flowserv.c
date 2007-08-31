@@ -24,6 +24,8 @@
 #include "../subnetpassword.h"
 #include "../shared/flowdata.h"
 #include "subnets.h"
+#include "fwrules.h"
+
 
 /* the minimum elapsed time between packets, in milliseconds. this corresponds
  * to a sustainable 24 frames per second */
@@ -47,6 +49,8 @@ struct packetheader flowbuffer;
 struct flowpacket *buffer;
 struct subnetpacket* subnets;
 struct packetheader cachedsubnets;
+struct fwrule* firewallrules;
+int numfwrules;
 unsigned int clients[MAXCLIENTS] = {0};
 unsigned int timeouts[MAXCLIENTS] = {0};
 int sendsock;
@@ -55,11 +59,12 @@ int numclients = 0;
 void delclient(unsigned int ip);
 
 /*
- * function:	flushbuffer()
- * purpose:	to flush data to a client socket
- * recieves:	a client struct
+ * function:	sendclients()
+ * purpose:		to send some data to all of our clients
+ * recieves:	a pointer to the data, and its length
  */
-inline void flushbuffer() {
+inline void sendclients(void* data, int dlen)
+{
 	int i;
 	struct sockaddr_in sin;
 	sin.sin_family = AF_INET;
@@ -70,20 +75,28 @@ inline void flushbuffer() {
 				delclient(clients[i]);
 			} else {
 				sin.sin_addr.s_addr = clients[i];
-				int len = sendto(sendsock, &flowbuffer, 
-						flowpacketsize(buffer) + SIZEOF_PACKETHEADER, 
+				int len = sendto(sendsock, data, 
+						dlen, 
 						0, (struct sockaddr*)&sin, sizeof(sin));
 
 				if (len < 0) {
 					printf("error writing %i bytes: %s\n",
-						flowpacketsize(buffer) + SIZEOF_PACKETHEADER, 
+						dlen, 
 						strerror(errno));
-				} else {
-				}
+				} 
 			}
 		}
 	}
-	
+}
+
+/*
+ * function:	flushbuffer()
+ * purpose:	to flush data to a client socket
+ * recieves:	a client struct
+ */
+inline void flushbuffer() {
+	int i;
+	sendclients(&flowbuffer, flowpacketsize(buffer) + SIZEOF_PACKETHEADER);
 	lastupdate = gettime();
 	buffer->count = 0;
 }
@@ -184,7 +197,7 @@ int initnetworkbyhost(const char* host)
 		return 0;
 
 	struct hostent * he = gethostbyname(host);
-	if (he <= 0) 
+	if (he == 0) 
 		return 0;
 	
 	//memcpy(&addr.sin_addr, he->h_addr_list[0], sizeof(struct in_addr));
@@ -219,6 +232,25 @@ int srvlisten()
 }
 
 /*
+ * this function will send the firewall rules to a given client
+ */
+void sendrules(int sock, struct sockaddr* address, socklen_t fromlen)
+{
+	int count = 0;
+	struct fwrule* tmp = firewallrules;
+	struct packetheader ph;
+	ph.version = VERSION;
+	ph.packettype = PKT_FWRULE;
+	ph.reserved = 0;
+	while (tmp)
+	{
+		int size = writerulepacket(ph.data, count++, numfwrules, tmp->rule);
+		tmp = tmp->next;
+		sendto(sock, &ph, SIZEOF_PACKETHEADER+size, 0, address, fromlen);
+	}
+}
+
+/*
  * function:	checklisten()
  * purpose:		to check the socket for a client wishing data
  * recieves:	listening socket
@@ -234,6 +266,7 @@ void checklisten(int listen)
 	addr.sin_addr.s_addr = INADDR_ANY;
 	socklen_t fromlen = sizeof(addr);
 	int err;
+	int i;
 	if ((err = recvfrom(listen, &ph, sizeof(ph), MSG_DONTWAIT, 
 		(struct sockaddr*)&addr, &fromlen)) > 0)
 	{
@@ -253,6 +286,15 @@ void checklisten(int listen)
 			addr.sin_port = htons(PORT);
 			sendto(listen, &cachedsubnets, subnetpacketsize(subnets) + SIZEOF_PACKETHEADER, 0, (struct sockaddr*)&addr, fromlen);
 			printf("Sent subnet information\n");
+			break;
+		case PKT_FIREWALL:
+			/* printf("Recieved a firewall packet\n"); */
+			sendclients(&ph, err);
+			break;
+		case PKT_FWRULE:
+			printf("Recieved a request for firewall rules\n");
+			addr.sin_port = htons(PORT);
+			sendrules(listen, (struct sockaddr*)&addr, fromlen);
 			break;
 		}
 	}
@@ -278,6 +320,8 @@ int main(int argc, char* argv[])
 		fprintf(stderr, "usage: %s <network-device> [hostname+]\n", argv[0]);
 		return 1;
 	}
+	
+	
 	int numsubnets = getsubnets(subarray, MAXINDEX, "thingy.usu.edu", "/private/cgi-bin/subnetlist.pl", subnetauthorization);
 	if (numsubnets > MAXINDEX) 
 		numsubnets = MAXINDEX;
@@ -287,6 +331,11 @@ int main(int argc, char* argv[])
 	}
 	subnets->count = numsubnets;
 	printf("Recieved information about %i subnets\n", numsubnets);
+
+	firewallrules = getfwrules("singsing.usu.edu", "/admin/firewall/currentrules.php?f=1", fwruleauthorization, &numfwrules);
+
+	printf("Recieved information about %i firewall rules\n", numfwrules);
+
 
 	/* set up our buffers */
 	buffer = (struct flowpacket*)flowbuffer.data;
@@ -348,6 +397,7 @@ int main(int argc, char* argv[])
 	}
 
 	pcap_close(handle);
+	freefwrules(firewallrules);
 
 	return 0;
 }
