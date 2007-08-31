@@ -720,6 +720,7 @@ void printdisplay(const char* s, unsigned short ip)
 			displaytext.dir[displaytext.which] = 1;
 		else
 			displaytext.dir[displaytext.which] = 0;
+		printf("%s\n", displaytext.log[displaytext.which]);
 			
 	}
 	displaytext.brightness[displaytext.which] = .75;
@@ -756,7 +757,7 @@ void drawdisplaytext()
 			if (displayy < 100)
 				glRasterPos2i(0, (i+2)*15 - displaytext.scroll);
 			else
-				glRasterPos2i(0, (IMGHEIGHT - 30) - (i-1 ) * 15 + displaytext.scroll);
+				glRasterPos2i(0, (IMGHEIGHT - 30) - (i+1 ) * 15 + displaytext.scroll);
 			//glRasterPos2i(0, IMGHEIGHT - 13 - i*13);
 			renderstring(displaytext.log[(i+displaytext.which)%DISPLAYLINES], 1);
 		}
