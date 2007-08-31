@@ -37,7 +37,7 @@ subnet subnets[MAXSUBNETS];
 
 int SHOW_IN = 1;
 int SHOW_OUT = 1;
-int mapping = 0;
+int mapping = 2;
 const char moviefile[] = "output.avi";
 
 struct timeval inittime;
@@ -56,6 +56,16 @@ unsigned int serverip = 23597484;
 SDL_Surface * screen;
 char videostate=0;
 const char* rules[65536] = {0};
+#define DISPLAYLINES 120
+#define DISPLAYWIDTH 120
+#define DISPLAYFADE .05
+struct t_displaytext 
+{
+	char log[DISPLAYLINES][DISPLAYWIDTH];
+	float brightness[DISPLAYLINES];
+	int which;
+} displaytext;
+
 
 /* prototypes */
 int  idle();
@@ -71,6 +81,7 @@ unsigned short rev_netblock(unsigned short);
 void update_menubar();
 inline unsigned short mappixel(unsigned short ip);
 void sdl_eventloop();
+void printdisplay(const char* s);
 
 /**
  * Where execution begins. Duh.
@@ -89,6 +100,14 @@ int main(int argc, char** argv)
 	for (i = 0; i < 65536; i++)
 		forwardmap[reversemap[i]] = i;
 	
+	/* initialize the onscreen log */
+	for (i = 0; i < DISPLAYLINES; i++)
+	{
+		memset(&displaytext.log[i][0], 0, DISPLAYWIDTH);
+		displaytext.brightness[i] = 0;
+	}
+	displaytext.which = DISPLAYLINES-1;
+
 	glEnable(GL_BLEND);
 	glBlendFunc(GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA);
 	glEnable(GL_TEXTURE_2D);
@@ -104,6 +123,9 @@ int main(int argc, char** argv)
 	
 	//screen = SDL_SetVideoMode(512, 512, 32, SDL_RESIZABLE|SDL_OPENGL);
 	//screen = SDL_SetVideoMode(modes[0]->w, modes[0]->h, 32,       SDL_FULLSCREEN|SDL_DOUBLEBUF|SDL_HWSURFACE|SDL_OPENGL);
+	printdisplay("Hello gentle users");
+	printdisplay("Wecome to this program");
+	printdisplay("enjoy this message, which is cluttering your screen");
 
 	if (!screen) 
 	{
@@ -626,7 +648,7 @@ int idle()
 	return 0;
 }
 
-inline void renderstring(const char* s)
+inline void renderstring(const char* s, float color)
 {
 /*	while (*s)
 		glutBitmapCharacter(GLUT_BITMAP_8_BY_13, *(s++)); */
@@ -666,6 +688,42 @@ inline void renderstring(const char* s)
 	glPopClientAttrib();
 }
 
+void printdisplay(const char* s)
+{
+	displaytext.which--;
+	displaytext.which = (displaytext.which + DISPLAYLINES) % DISPLAYLINES;
+	strncpy(displaytext.log[displaytext.which], s, DISPLAYWIDTH-1);
+	displaytext.brightness[displaytext.which] = .75;
+}
+
+/*
+ * where we display text all over the screen. yay!
+ */
+void drawdisplaytext() 
+{
+	
+	int i;
+	glColor3f(1,1,1);
+	glRasterPos2i(displayx, displayy);
+	renderstring(displaystring, 1);
+	for (i = 0; i < DISPLAYLINES; i++) 
+	{
+		if (displaytext.brightness[(i + displaytext.which) % DISPLAYLINES] > .01)
+		{
+			displaytext.brightness[(i + displaytext.which) % DISPLAYLINES] -= DISPLAYFADE;
+			float color = displaytext.brightness[(i+displaytext.which)%DISPLAYLINES];
+			glColor3f(color,color,color);
+			/* figure out which direction to do this */
+			if (displayy < 100)
+				glRasterPos2i(0, (i+1)*15);
+			else
+				glRasterPos2i(0, (IMGHEIGHT - 30) - (i ) * 15);
+			//glRasterPos2i(0, IMGHEIGHT - 13 - i*13);
+			renderstring(displaytext.log[(i+displaytext.which)%DISPLAYLINES], 1);
+		}
+	}
+}
+
 /*
  * where drawing happens
  */
@@ -698,9 +756,12 @@ void display()
 		return 1;
 	}
 	/* insert unlock here */
-	glRasterPos2i(displayx, displayy);	
-	renderstring(displaystring);
-
+	/* draw the logged stuff */
+	//glColor3f(1,1,0);
+	drawdisplaytext();
+	//glRasterPos2i(displayx, displayy);	
+	//glColor3f(1,1,1);
+	//renderstring(displaystring, 1);
 	SDL_GL_SwapBuffers();
 }
 
@@ -749,6 +810,7 @@ void update_image(struct flowpacket* fp)
 	/* unlock it */
 
 }
+
 /*
  * function:	update_firewall()
  * purpose:		to update the image according to a given flowpacket
@@ -773,6 +835,8 @@ void update_firewall(struct fwflowpacket* fp)
 		   */
 		datapointdrop(&pointdata[pixel], 192);
 		pointdata[pixel].msg = rules[fp->data[i].rule];
+		if (rules[fp->data[i].rule]) 
+			printdisplay(rules[fp->data[i].rule]);
 	}
 	pthread_mutex_unlock(&imglock);
 	/* unlock it */
@@ -796,8 +860,7 @@ void updatesubnets(struct subnetpacket* sp)
 		subnets[i].mask = sp->subnets[i].mask;
 	}
 	/* redraw the subnet stuff */
-	outlinesubnets();
-
+	initbuffer();
 }
 
 /*
