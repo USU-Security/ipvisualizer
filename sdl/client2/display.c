@@ -699,7 +699,7 @@ void printdisplay(const char* s, unsigned short ip)
 	{
 		displaytext.dup[displaytext.which]++;
 		if(ip != 0) 
-			snprintf(displaytext.log[displaytext.which], DISPLAYWIDTH+29, "%s (129.123.%d.%d) (%d)", s, ip & 255, ip >> 8, displaytext.dup[displaytext.which]);
+			snprintf(displaytext.log[displaytext.which], DISPLAYWIDTH+29, "%s (129.123.%d.%d) (%d)", s, ip >> 8, ip & 255, displaytext.dup[displaytext.which]);
 		else 
 			snprintf(displaytext.log[displaytext.which], DISPLAYWIDTH+29, "%s (%d)", s, displaytext.dup[displaytext.which]);
 	}
@@ -709,7 +709,7 @@ void printdisplay(const char* s, unsigned short ip)
 		displaytext.which = (displaytext.which + DISPLAYLINES) % DISPLAYLINES;
 		strncpy(displaytext.log[displaytext.which], s, DISPLAYWIDTH-1);
 		if(ip != 0) 
-			snprintf(displaytext.log[displaytext.which], DISPLAYWIDTH+19, "%s (129.123.%d.%d)", s, ip & 255, ip >> 8);
+			snprintf(displaytext.log[displaytext.which], DISPLAYWIDTH+19, "%s (129.123.%d.%d)", s, ip >> 8, ip & 255);
 		else 
 			snprintf(displaytext.log[displaytext.which], DISPLAYWIDTH+19, "%s", s);
 
