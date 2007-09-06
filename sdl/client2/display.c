@@ -38,6 +38,8 @@ subnet subnets[MAXSUBNETS];
 int SHOW_IN = 1;
 int SHOW_OUT = 1;
 int mapping = 2;
+int pausedisplay = 0;
+int displayrules = 1;
 const char moviefile[] = "output.avi";
 
 struct timeval inittime;
@@ -127,9 +129,6 @@ int main(int argc, char** argv)
 	
 	//screen = SDL_SetVideoMode(512, 512, 32, SDL_RESIZABLE|SDL_OPENGL);
 	//screen = SDL_SetVideoMode(modes[0]->w, modes[0]->h, 32,       SDL_FULLSCREEN|SDL_DOUBLEBUF|SDL_HWSURFACE|SDL_OPENGL);
-	printdisplay("Hello gentle users",0);
-	printdisplay("Wecome to this program",0);
-	printdisplay("enjoy this message, which is cluttering your screen",0);
 
 	if (!screen) 
 	{
@@ -351,6 +350,12 @@ void keyup(unsigned char k, int x, int y)
 	case SDLK_RETURN:
 		if (keys[SDLK_RALT] || keys[SDLK_LALT])
 			togglefullscreen();
+		break;
+	case SDLK_p: /* pause output */
+		pausedisplay = !pausedisplay;
+		break;
+	case SDLK_r: /* show the scrolling rules */
+		displayrules = !displayrules;
 		break;
 	default:
 		printf("Not handling key 0x%2X '%s'\n", (int)k, SDL_GetKeyName(k));
@@ -636,7 +641,8 @@ int idle()
 		/* sleep the remaining time */
 		usleep(((FRAMERATE - (timer()-ti)) * 1000000));
 	
-	fade();
+	if (!pausedisplay)
+		fade();
 	ti = timer();
 	counter++;
 	if (counter >= 24 * HEARTBEAT) 
@@ -737,29 +743,36 @@ void drawdisplaytext()
 	glColor3f(1,1,1);
 	glRasterPos2i(displayx, displayy);
 	renderstring(displaystring, 1);
-	for (i = 0; i < DISPLAYLINES; i++) 
+	if (displayrules)
 	{
-		if (displaytext.brightness[(i + displaytext.which) % DISPLAYLINES] > .01)
+		for (i = 0; i < DISPLAYLINES; i++) 
 		{
-			if (displaytext.dir[(i + displaytext.which) % DISPLAYLINES]) 
+			if (displaytext.brightness[(i + displaytext.which) % DISPLAYLINES] > .01 || pausedisplay)
 			{
-				displaytext.brightness[(i + displaytext.which) % DISPLAYLINES] -= DISPLAYFADE * .5;
-				float color = displaytext.brightness[(i+displaytext.which)%DISPLAYLINES];
-				glColor3f(color*1.3,0,0);
+				if (displaytext.dir[(i + displaytext.which) % DISPLAYLINES]) 
+				{
+					displaytext.brightness[(i + displaytext.which) % DISPLAYLINES] -= DISPLAYFADE * .5;
+					float color = displaytext.brightness[(i+displaytext.which)%DISPLAYLINES];
+					if (pausedisplay)
+						color = .5;
+					glColor3f(color*1.3,0,0);
+				}
+				else
+				{
+					displaytext.brightness[(i + displaytext.which) % DISPLAYLINES] -= DISPLAYFADE;
+					float color = displaytext.brightness[(i+displaytext.which)%DISPLAYLINES];
+					if (pausedisplay)
+						color = .5;
+					glColor3f(color,color,color);
+				}
+				/* figure out which direction to do this */
+				if (displayy < 100)
+					glRasterPos2i(0, (i+2)*15 - displaytext.scroll);
+				else
+					glRasterPos2i(0, (IMGHEIGHT - 30) - (i+1 ) * 15 + displaytext.scroll);
+				//glRasterPos2i(0, IMGHEIGHT - 13 - i*13);
+				renderstring(displaytext.log[(i+displaytext.which)%DISPLAYLINES], 1);
 			}
-			else
-			{
-				displaytext.brightness[(i + displaytext.which) % DISPLAYLINES] -= DISPLAYFADE;
-				float color = displaytext.brightness[(i+displaytext.which)%DISPLAYLINES];
-				glColor3f(color,color,color);
-			}
-			/* figure out which direction to do this */
-			if (displayy < 100)
-				glRasterPos2i(0, (i+2)*15 - displaytext.scroll);
-			else
-				glRasterPos2i(0, (IMGHEIGHT - 30) - (i+1 ) * 15 + displaytext.scroll);
-			//glRasterPos2i(0, IMGHEIGHT - 13 - i*13);
-			renderstring(displaytext.log[(i+displaytext.which)%DISPLAYLINES], 1);
 		}
 	}
 	if (displaytext.scroll)
@@ -957,13 +970,15 @@ void* collect_data(void* p)
 		read(s, &ph, sizeof(ph));
 		switch (ph.packettype)
 		{
-		case PKT_FLOW:	
+		case PKT_FLOW:
+			if (pausedisplay) continue;
 			update_image((struct flowpacket*)ph.data);
 			break;
 		case PKT_SUBNET:
 			updatesubnets((struct subnetpacket*)ph.data);
 			break;
 		case PKT_FIREWALL:
+			if (pausedisplay) continue;
 			update_firewall((struct fwflowpacket*)ph.data);
 			break;
 		case PKT_FWRULE:
