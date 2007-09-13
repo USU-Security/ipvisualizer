@@ -30,6 +30,8 @@ while i < x.biWidth*x.biHeight:
 	if x.rgbdata[i]:
 		address = fwd_netblock(i)
 		#address = i
+		# FIXME: separate r/g/b?
+		# FIXME: deal with intensity?
 		pixels.append(address)
 	i += 1
 
