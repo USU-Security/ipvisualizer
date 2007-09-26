@@ -128,9 +128,37 @@ def build_udp_header( **kw ):
 	udp_hdr = struct.pack( UDPHdrFmt, htons(spt), htons(dpt), htons(len), htons(checksum) )
 	return udp_hdr
 
+def build_icmp_header( **kw ):
+	if( kw.has_key('type') ):
+		type = kw['type']
+	else:
+		type = 0
+	if( kw.has_key('code') ):
+		code = kw['code']
+	else:
+		code = 0
+	if( kw.has_key('checksum') ):
+		checksum = kw['checksum']
+	else:
+		checksum = 0
+	if( kw.has_key('id') ):
+		id = kw['id']
+	else:
+		id = 0
+	if( kw.has_key('seq') ):
+		seq = kw['seq']
+	else:
+		seq = 0
+	ICMPHdrFmt = 'BBHHH'
+	icmp_hdr = struct.pack(ICMPHdrFmt, type, code, htons(checksum),
+			htons(id), htons(seq) )
+	return icmp_hdr
+
+
 def build_packet_x( ):
 	ip_hdr = build_ip_header( dst = 0x817b0761, proto=17 )
-	udp_hdr = build_udp_header( spt=12345, dpt=54321 )
-	return ip_hdr + udp_hdr
+	#udp_hdr = build_udp_header( spt=12345, dpt=54321 )
+	icmp_hdr = build_icmp_header( type=8, code=0, id=1337 )
+	return ip_hdr + icmp_hdr
 
 
