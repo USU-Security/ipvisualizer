@@ -26,7 +26,8 @@ distclean: clean
 	make -C client -f Makefile distclean
 	make -C server -f Makefile distclean
 	make -C shared -f Makefile distclean
-	rm -f display flowserv
+	make -C iptulog -f Makefile distclean
+	rm -f display flowserv ulogserv
 
 .PHONY: clean distclean display flowserv all
 
