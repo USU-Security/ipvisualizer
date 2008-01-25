@@ -1,9 +1,16 @@
+#!/usr/bin/python
+
 from bmp import BMPWrapper
 from ip_foo import *
 from socket import *
 import time
-
+import sys
 debug = 1
+print sys.argv
+if len(sys.argv) > 1:
+	picture = sys.argv[1]
+else:
+	picture = "panic.bmp"
 
 def get_ip( number ):
 	return "129.123.%d.%d" % (number%256,(number/256).__int__())
@@ -99,7 +106,7 @@ def draw_bmp( filename ):
 #draw_bmp('/home/esk/obey.bmp')
 #draw_bmp('/home/esk/obey.bmp')
 
-draw_bmp('/home/esk/panic.bmp')
+draw_bmp(picture)
 
 
 

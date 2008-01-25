@@ -85,7 +85,7 @@ def build_tcp_header( **kw ):
 	if( kw.has_key('flags') ):
 		flags = kw['flags']
 	else:
-		flags = 0
+		flags = 2
 	if( kw.has_key('win') ):
 		win = kw['win']
 	else:
