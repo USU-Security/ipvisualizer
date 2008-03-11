@@ -5,7 +5,15 @@ from ip_foo import *
 from socket import *
 import time
 import sys
+import random
+
 debug = 1
+
+# IP address of our UEN box
+src = 0xcd790082
+
+random.seed()
+
 print sys.argv
 if len(sys.argv) > 1:
 	picture = sys.argv[1]
@@ -13,7 +21,7 @@ else:
 	picture = "panic.bmp"
 
 def get_ip( number ):
-	return "129.123.%d.%d" % (number%256,(number/256).__int__())
+	return "129.123.%d.%d" % ((number/256).__int__(),number%256)
 
 
 def fwd_netblock( num ):
@@ -32,6 +40,8 @@ def rev_netblock( num ):
 
 def draw_bmp( filename ):
 	x = BMPWrapper( filename )
+	seq = 1234
+	spt = 1
 	i = 0
 	pixels = []
 	while i < x.biWidth*x.biHeight:
@@ -50,6 +60,7 @@ def draw_bmp( filename ):
 			if a:
 				pixels.append( (pixel,red,green,blue) )
 		i += 1
+	#s = socket(AF_INET,SOCK_RAW,IPPROTO_RAW)
 	s = socket(AF_INET,SOCK_RAW,IPPROTO_RAW)
 	f = open('packets.hex','w')
 	port = 4321
@@ -57,6 +68,7 @@ def draw_bmp( filename ):
 	R=1
 	G=2
 	B=3
+	tcp_data="Random data for a TCP packet..."
 	for pixel in pixels:
 		if( pixel[R] ):
 			udp_ip_hdr = build_ip_header( dst = 0x817b0000 | pixel[P], ttl = 3, proto = 17 )
@@ -69,23 +81,30 @@ def draw_bmp( filename ):
 				i+=1
 		
 		if( pixel[G] ):
-			tcp_ip_hdr = build_ip_header( dst = 0x817b0000 | pixel[P], ttl = 3, proto = 6 )
-			tcp_hdr = build_tcp_header( spt = 1234, dpt = 4321, len = 0 )
-			if debug:
-				f.write( tcp_ip_hdr + tcp_hdr )
+			# send this packet pixel[G] times for brightness
 			i=0
 			while i < pixel[G] : 
-				s.sendto( tcp_ip_hdr + tcp_hdr, (get_ip(pixel[P]),port) )
+				#tcp_ip_hdr = build_ip_header( dst = 0x817b0000 | pixel[P], ttl = 3, proto = 6, flags=4 )
+				#tcp_hdr = build_tcp_header( spt = 1234, dpt = 4321, flags=2, seq=random.getrandbits(32), win=2048 )
+				#tcp_pkt = tcp_ip_hdr + tcp_hdr + tcp_data
+				tcp_pkt = build_tcp_syn_packet( src=src, dst=0x817b0000 | pixel[P], spt=spt, dpt=4321, seq=seq, ttl=3, data="meh " )
+				if debug:
+					f.write( tcp_pkt )
+				s.sendto( tcp_pkt, (get_ip(pixel[P]),port) )
+				seq += 1
+				spt += 1
 				i+=1
 
 		if( pixel[B] ):
-			icmp_ip_hdr = build_ip_header( dst = 0x817b0000 | pixel[P], ttl = 3, proto = 1 )
-			icmp_hdr = build_icmp_header(type=8)
+			#icmp_ip_hdr = build_ip_header( dst = 0x817b0000 | pixel[P], ttl = 3, proto = 1 )
+			#icmp_hdr = build_icmp_header(type=8)
+			#pkt = icmp_ip_hdr+ icmp_hdr
+			pkt=build_icmp_echo_packet(dst = 0x817b0000 | pixel[P], ttl = 3 )
 			if debug:
-				f.write( icmp_ip_hdr + icmp_hdr )
+				f.write( pkt )
 			i = 0
 			while i < pixel[B] : 
-				s.sendto( icmp_ip_hdr + icmp_hdr, (get_ip(pixel[P]),port) )
+				s.sendto( pkt, (get_ip(pixel[P]),port) )
 				i+=1
 
 	del x
