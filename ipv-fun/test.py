@@ -14,14 +14,8 @@ src = 0xcd790082
 
 random.seed()
 
-print sys.argv
-if len(sys.argv) > 1:
-	picture = sys.argv[1]
-else:
-	picture = "panic.bmp"
-
 def get_ip( number ):
-	return "129.123.%d.%d" % ((number/256).__int__(),number%256)
+	return "129.123.%d.%d" % (int(number/256),number%256)
 
 
 def fwd_netblock( num ):
@@ -38,12 +32,11 @@ def rev_netblock( num ):
 	y_outer = (num / 4096 ).__int__() % 26
 	return y_outer * 4096 + x_outer * 256 + y_inner * 16 + x_inner
 
-def draw_bmp( filename ):
+def get_rgb_from_bmp( filename ):
 	x = BMPWrapper( filename )
-	seq = 1234
-	spt = 1
 	i = 0
 	pixels = []
+	max_brightness = 4
 	while i < x.biWidth*x.biHeight:
 		if x.rgbdata[i]:
 			a = x.rgbdata[i] >> 24 & 0xFF
@@ -54,12 +47,18 @@ def draw_bmp( filename ):
 			#address = i
 			# FIXME: separate r/g/b?
 			# FIXME: deal with intensity?
-			red =   int( 4/255.0 * r )
-			green = int( 4/255.0 * g )
-			blue =  int( 4/255.0 * b )
+			red =   int( max_brightness/255.0 * r )
+			green = int( max_brightness/255.0 * g )
+			blue =  int( max_brightness/255.0 * b )
 			if a:
 				pixels.append( (pixel,red,green,blue) )
 		i += 1
+	del x
+	return pixels
+
+def draw_pixels( pixels ):
+	seq = 1234
+	spt = 1
 	#s = socket(AF_INET,SOCK_RAW,IPPROTO_RAW)
 	s = socket(AF_INET,SOCK_RAW,IPPROTO_RAW)
 	f = open('packets.hex','w')
@@ -107,25 +106,20 @@ def draw_bmp( filename ):
 				s.sendto( pkt, (get_ip(pixel[P]),port) )
 				i+=1
 
-	del x
+def draw_bmp( filename ):
+	pixels = get_rgb_from_bmp(filename)
+	draw_pixels( pixels )
 
-#draw_bmp('ayb.bmp')
-#draw_bmp('ayb.bmp')
-#draw_bmp('ayb.bmp')
 
-#time.sleep(10)
+if __name__ == "__main__":
+	print sys.argv
+	#time.sleep(10)
+	if len(sys.argv) > 1:
+		picture = sys.argv[1]
+	else:
+		picture = "panic.bmp"
 
-#draw_bmp('/home/esk/stickmiles.bmp')
-#draw_bmp('/home/esk/stickmiles.bmp')
-#draw_bmp('/home/esk/stickmiles.bmp')
-
-#time.sleep(10)
-
-#draw_bmp('/home/esk/obey.bmp')
-#draw_bmp('/home/esk/obey.bmp')
-#draw_bmp('/home/esk/obey.bmp')
-
-draw_bmp(picture)
+	draw_bmp(picture)
 
 
 
