@@ -46,19 +46,17 @@
 unsigned long long lastupdate = 0;
 
 struct packetheader flowbuffer;
-struct flowpacket *buffer;
-struct subnetpacket* subnets;
-struct packetheader cachedsubnets;
+struct verbosefirewall *buffer = 0;
 unsigned int clients[MAXCLIENTS] = {0};
 int sendsock;
 int numclients = 0;
 
 
 /*
- *  * function:    flushbuffer()
- *   * purpose:     to flush data to a client socket
- *    * recieves:    a client struct
- *     */
+ * function:    flushbuffer()
+ * purpose:     to flush data to a client socket
+ * recieves:    a client struct
+ */
 inline void flushbuffer() {
         int i;
         struct sockaddr_in sin;
@@ -68,12 +66,12 @@ inline void flushbuffer() {
                 if (clients[i]) {
                         sin.sin_addr.s_addr = clients[i];
                         int len = sendto(sendsock, &flowbuffer,
-                                        flowpacketsize(buffer) + SIZEOF_PACKETHEADER,
+                                        vflowpacketsize(buffer) + SIZEOF_PACKETHEADER,
                                         0, (struct sockaddr*)&sin, sizeof(sin));
 
                         if (len < 0) {
                                 printf("error writing %i bytes: %s\n",
-                                        flowpacketsize(buffer) + SIZEOF_PACKETHEADER,
+                                        vflowpacketsize(buffer) + SIZEOF_PACKETHEADER,
                                         strerror(errno));
                         } else {
                         }
@@ -88,31 +86,50 @@ inline void flushbuffer() {
 /*
  * function:    report()
  * purpose:             to report a packet
- * recieves:    the source ip, the destination ip, the packet size, 
+ * recieves:    the source ip, the destination ip, the prefix number
  *                              the packet type
  */
-void report(unsigned int src, unsigned int dst, unsigned short size, enum packettype pt) {
-        if ((src & NETMASK) == NETBASE)
-        {
-                buffer->data[buffer->count].incoming = 0;
-                buffer->data[buffer->count].ip = src & ~NETMASK;
-        }
+void report(unsigned int src, unsigned int dst, unsigned char type, unsigned short srcport, unsigned short dstport) {
+		if ((src & NETMASK) == NETBASE)
+		{
+                buffer->data[buffer->count].local = src & ~NETMASK;
+				buffer->data[buffer->count].remote = dst;
+				buffer->data[buffer->count].incoming = 0;
+				if (type == 6 || type == 17) 
+				{
+					buffer->data[buffer->count].localport = srcport;
+					buffer->data[buffer->count].remoteport = dstport;
+				}
+					
+		}
         else if ((dst & NETMASK) == NETBASE)
-        {
-                buffer->data[buffer->count].incoming = 1;
-                buffer->data[buffer->count].ip = dst & ~NETMASK;
-        }
+		{
+                buffer->data[buffer->count].local = dst & ~NETMASK;
+				buffer->data[buffer->count].remote = src;
+				buffer->data[buffer->count].incoming = 1;
+				if (type == 6 || type == 17) 
+				{
+					buffer->data[buffer->count].localport = dstport;
+					buffer->data[buffer->count].remoteport = srcport;
+				}
+		}
         else
-        {
                 /* ignore the packet */
                 return;
-        }
-        buffer->data[buffer->count].packet = (unsigned int)pt;
-        buffer->data[buffer->count].packetsize = size;
-/*
+		if (type == 6) //tcp
+			buffer->data[buffer->count].packet = TCP;
+		else if (type == 17) 
+			buffer->data[buffer->count].packet = UDP;
+		else
+		{
+			buffer->data[buffer->count].packet = OTHER;
+			buffer->data[buffer->count].localport = 0;
+			buffer->data[buffer->count].remoteport = 0;
+		}
+//*
           printf("saw flow from xx.xx.%i.%i\n",
-                          (buffer->data[buffer->count].ip & 0x0000ff00) >> 8,
-                                           buffer->data[buffer->count].ip & 0x000000ff);
+                          (buffer->data[buffer->count].local & 0x0000ff00) >> 8,
+                                           buffer->data[buffer->count].local & 0x000000ff);
 // */
 
         buffer->count++;
@@ -122,11 +139,11 @@ void report(unsigned int src, unsigned int dst, unsigned short size, enum packet
 
 
 /*
- *  * function:    addclient()
- *   * purpose:             to add a new client
- *    * recieves:    the ip of a client, in network byte order
- *     * returns:             whether or not the client was added
- *      */
+ * function:    addclient()
+ * purpose:             to add a new client
+ * recieves:    the ip of a client, in network byte order
+ * returns:             whether or not the client was added
+ */
 int addclient(unsigned int ip)
 {
         int i;
@@ -148,11 +165,11 @@ int addclient(unsigned int ip)
 }
 
 /*
- *  * function:    initnetworkbyhost()
- *   * purpose:             to set up a socket to stream to a client
- *    * recieves:    a string representing the person who wants the data
- *     * returns:             success or failure
- *      */
+ * function:    initnetworkbyhost()
+ * purpose:             to set up a socket to stream to a client
+ * recieves:    a string representing the person who wants the data
+ * returns:             success or failure
+ */
 int initnetworkbyhost(const char* host)
 {
         /* see if we have room */
@@ -172,8 +189,8 @@ int initnetworkbyhost(const char* host)
 int main(int argc, char* argv[])
 {
 	int i;
-	unsigned char buffer[MAXLEN];
 	/* initialize our list of static clients */
+	unsigned char ulogbuffer[MAXLEN];
 	for (i = 1; i < argc; i++)
 		initnetworkbyhost(argv[i]);
 
@@ -185,16 +202,31 @@ int main(int argc, char* argv[])
 		ipulog_perror(0);
 		return 1;
 	}
+
+	/* set up our buffer pointer */
+	flowbuffer.version = VERSION;
+	flowbuffer.packettype = PKT_VERBOSEFIREWALL;
+	flowbuffer.reserved = 0;
+	buffer = (struct verbosefirewall*)flowbuffer.data;
+	buffer->base = NETBASE;
+	buffer->mask = 16;
+	buffer->count=0;
+
+
+	/* create the socket for our use */
+	sendsock = socket(AF_INET, SOCK_DGRAM, 0);
+
 	const struct sniff_ip *ip; 
 	while(1) 
 	{
-		int len = ipulog_read(h, buffer, MAXLEN, 1);
+		int len = ipulog_read(h, ulogbuffer, MAXLEN, 1);
 		if (len <= 0) 
 		{
 			ipulog_perror("ipulog_read returned a value less than 0");
 			return 2;
 		}
 		/* do something with packet */
+		/*
 		printf("Read %i bytes:\n", len);
 		for (i = 0; i < len; i++)
 		{
@@ -202,10 +234,11 @@ int main(int argc, char* argv[])
 				printf("\n");
 			printf("%02hhX ", buffer[i]);
 		}
+		*/
 		ulog_packet_msg_t *packet; 
-		while(packet = ipulog_get_packet(h, buffer, len))
+		while(packet = ipulog_get_packet(h, ulogbuffer, len))
 		{
-			/*
+			//*
 			printf("\n");
 			printf("mark: %u\n", packet->mark);
 			printf("timestamp_sec: %u\n", packet->timestamp_sec);
@@ -217,23 +250,13 @@ int main(int argc, char* argv[])
 			printf("prefix: %s\n", packet->prefix);
 			printf("mac: %02hhX:%02hhX:%02hhX:%02hhX:%02hhX:%02hhX\n", packet->mac[0], packet->mac[1], packet->mac[2], packet->mac[3], packet->mac[4], packet->mac[5]);
 			printf("\t");
-			*/
-			for (i = 0; i < len; i++)
-			{
-				//if (!(i%20))
-				//	printf("\n\t");
-				//printf("%02hhX ", packet->payload[i]);
-				ip = (struct sniff_ip*)(&(packet->payload[0]));
-				enum packettype pt;
-				if (ip->ip_p == T_TCP)
-					pt= TCP;
-				else if (ip->ip_p == T_UDP)
-					pt=UDP;
-				else
-					pt = OTHER;
-				report(ntohl(ip->ip_src), ntohl(ip->ip_dst), len, pt);
-			}
-
+			// */
+			/* convert the prefix to an unsigned short int */
+			//unsigned short prefix = strtol(packet->prefix, NULL, 16);
+			ip = (struct sniff_ip*)(&(packet->payload[0]));
+			//void report(unsigned int src, unsigned int dst, unsigned char type, unsigned short srcport, unsigned short dstport) {
+			struct tcp_udp * p = (struct tcp_udp*)IP_NEXT(ip);
+			report(ntohl(ip->ip_src), ntohl(ip->ip_dst), ip->ip_p, p->srcport, p->dstport);
 		}
 	}
 

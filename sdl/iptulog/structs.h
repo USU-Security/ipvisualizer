@@ -26,6 +26,14 @@ struct sniff_ip {
     u_short ip_sum;		/* checksum */
     unsigned int  ip_src,ip_dst; /* source and dest address */
 };
-#define IP_HL(ip)		(((ip)->ip_vhl) & 0x0f)
+#define IP_HL(ip)		(((ip)->ip_vhl) & 0x0f << 2)
 #define IP_V(ip)		(((ip)->ip_vhl) >> 4)
+
+/* generic tcp/udp two port header */
+struct tcp_udp {
+	u_short srcport;
+	u_short dstport;
+};
+
+#define IP_NEXT(ip)		((void*)(ip + (IP_HL(ip)*4)))
 
