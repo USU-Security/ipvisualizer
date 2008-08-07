@@ -6,13 +6,19 @@
 /* returns the number of bytes that are valid */
 inline int flowpacketsize(struct flowpacket* f)
 {
-	return(2*sizeof(unsigned short) + sizeof(flowdata) * f->count);
+	return(4*sizeof(unsigned short) + sizeof(flowdata) * f->count);
 }
 
 /* returns the number of bytes that are valid */
 inline int fwflowpacketsize(struct fwflowpacket* f)
 {
-	return(2*sizeof(unsigned short) + sizeof(fwflowdata) * f->count);
+	return(4*sizeof(unsigned short) + sizeof(fwflowdata) * f->count);
+}
+
+/* returns the number of bytes that are valid */
+inline int vflowpacketsize(struct verbosefirewall* f)
+{
+	return(SIZEOF_VERBOSEHEADER + SIZEOF_VERBOSEDATA * f->count);
 }
 
 inline int subnetpacketsize(struct subnetpacket* s)

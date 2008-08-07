@@ -125,7 +125,7 @@ int main(int argc, char** argv)
 	SDL_GL_SetAttribute(SDL_GL_DOUBLEBUFFER, 1);
 	/* get a video mode */
 	
-	screen = SDL_SetVideoMode(512, 512, 32, SDL_RESIZABLE|SDL_OPENGL);
+	screen = SDL_SetVideoMode(1024, 1024, 32, SDL_RESIZABLE|SDL_OPENGL);
 	
 	//screen = SDL_SetVideoMode(512, 512, 32, SDL_RESIZABLE|SDL_OPENGL);
 	//screen = SDL_SetVideoMode(modes[0]->w, modes[0]->h, 32,       SDL_FULLSCREEN|SDL_DOUBLEBUF|SDL_HWSURFACE|SDL_OPENGL);
@@ -698,10 +698,10 @@ inline void renderstring(const char* s, float color)
 	glPopClientAttrib();
 }
 
-void printdisplay(const char* s, unsigned short ip)
+void printdisplay(const char* s, unsigned short ip )
 {
 	/* check for duplicate lines */
-	if (0 == strncmp(displaytext.log[displaytext.which], s, strlen(s)))
+	if (displaytext.brightness[displaytext.which] > .1 &&  0 == strncmp(displaytext.log[displaytext.which], s, strlen(s)))
 	{
 		displaytext.dup[displaytext.which]++;
 		if(ip != 0) 
@@ -726,7 +726,7 @@ void printdisplay(const char* s, unsigned short ip)
 			displaytext.dir[displaytext.which] = 1;
 		else
 			displaytext.dir[displaytext.which] = 0;
-		printf("%s\n", displaytext.log[displaytext.which]);
+		//printf("%s\n", displaytext.log[displaytext.which]);
 			
 	}
 	displaytext.brightness[displaytext.which] = .75;
@@ -889,8 +889,13 @@ void update_firewall(struct fwflowpacket* fp)
 		   fp.data[i].ip & 0x000000ff);
 		   */
 		datapointdrop(&pointdata[pixel], 192);
-		pointdata[pixel].msg = rules[fp->data[i].rule];
-		char buffer[256];
+		if (pointdata[pixel].msg)
+		{
+			free(pointdata[pixel].msg);
+			pointdata[pixel].msg = 0;
+		}
+		if (rules[fp->data[i].rule])
+			pointdata[pixel].msg = strdup(rules[fp->data[i].rule]);
 		if (rules[fp->data[i].rule]) 
 			printdisplay(rules[fp->data[i].rule], fp->data[i].ip);
 	}
@@ -899,6 +904,60 @@ void update_firewall(struct fwflowpacket* fp)
 
 }
 
+/*
+ * function:	update_firewall_verbose()
+ * purpose:		to update the image according to a given flowpacket
+ * recieves:	the flow packet
+ */
+void update_firewall_verbose(struct verbosefirewall* fp) 
+{
+	int i;
+	int max = fp->count;
+	if (max > MAXINDEX)
+		max = MAXINDEX; /* watch those externally induced overflows */
+	/* lock it up */
+	union iptobytes {
+		unsigned char b[4];
+		unsigned int i;
+	} convert;
+	pthread_mutex_lock(&imglock);
+	for (i = 0; i < max; i++)
+	{
+		int pixel = mappixel(fp->data[i].local);
+
+		/*
+		   printf("jumping pixel for ip 129.123.%i.%i\n",
+		   (fp.data[i].ip & 0x0000ff00) >> 8,
+		   fp.data[i].ip & 0x000000ff);
+		   */
+		datapointdrop(&pointdata[pixel], 192);
+		char buffer[512];
+		convert.i = fp->data[i].remote;
+		const char * p = "";
+		if (fp->data[i].packet == UDP)
+			p = "UDP";
+		else if (fp->data[i].packet == TCP)
+			p = "TCP";
+		if (fp->data[i].packet == OTHER)
+			snprintf(buffer, 512, "OTHER %hhu.%hhu.%hhu.%hhu %s",
+				convert.b[3], convert.b[2], convert.b[1], convert.b[0],
+				fp->data[i].incoming? "-->" : "<--");
+		else
+			snprintf(buffer, 512, "% 5s %hhu.%hhu.%hhu.%hhu:%hu %s %hu:",
+				p,
+				convert.b[3], convert.b[2], convert.b[1], convert.b[0],
+				fp->data[i].remoteport,
+				fp->data[i].incoming? "-->" : "<--",				
+				fp->data[i].localport);
+		printdisplay(buffer, fp->data[i].local);
+		if (pointdata[pixel].msg)
+			free(pointdata[pixel].msg);
+		pointdata[pixel].msg = strdup(buffer);
+	}
+	pthread_mutex_unlock(&imglock);
+	/* unlock it */
+
+}
 /*
  * function:	updatesubnets()
  * purpose:		to update our list of subnets
@@ -983,6 +1042,10 @@ void* collect_data(void* p)
 			break;
 		case PKT_FWRULE:
 			update_rule(ph.data);
+			break;
+		case PKT_VERBOSEFIREWALL:
+			if (pausedisplay) continue;
+			update_firewall_verbose((struct verbosefirewall*)ph.data);
 			break;
 		default:
 			printf("Recieved garbage packet of type %i (0x%2X)\n", (unsigned int)ph.packettype, (unsigned int)ph.packettype);

@@ -42,9 +42,29 @@ struct packetheader {
 #define PKT_SUBNET 1
 #define PKT_FIREWALL 2
 #define PKT_FWRULE 3
+#define PKT_VERBOSEFIREWALL 4
 
+#define SIZEOF_VERBOSEHEADER 8
+#define SIZEOF_VERBOSEDATA 12
+#define MAXVERBOSE ((BUFFERSIZE-SIZEOF_PACKETHEADER-SIZEOF_VERBOSEHEADER)/SIZEOF_VERBOSEDATA)
 
+typedef struct t_verbosedata {
+	unsigned short local;
+	unsigned int incoming:1;
+	unsigned int packet:2;
+	unsigned int reserved:13;
+	unsigned int remote;
+	unsigned short localport;
+	unsigned short remoteport;
+} verbosedata;
 
+struct verbosefirewall {
+	unsigned short count;
+	unsigned short mask;
+	unsigned int base;
+	verbosedata data[MAXVERBOSE];
+} ;
+	
 
 typedef struct t_flowdata {
 	/* 16 bits for the last two octets of the ip */
@@ -112,6 +132,16 @@ struct fwrulepacket {
 	unsigned short length;
 	char* string;
 };
+
+typedef struct t_binaryrule {
+	unsigned int src;
+	unsigned int dst;
+	unsigned char proto;
+	unsigned char flags;
+	unsigned short index;
+	unsigned short srcport;
+	unsigned short dstport;
+} binaryrule;
 
 
 inline int flowpacketsize(struct flowpacket* f);
