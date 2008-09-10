@@ -5,7 +5,6 @@
  * creator:	rian shelley
  */
 
-
 #include <SDL/SDL.h>
 #include <GL/glu.h>
 #include <sys/time.h>
