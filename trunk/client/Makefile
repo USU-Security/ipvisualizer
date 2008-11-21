@@ -1,8 +1,8 @@
-LDFLAGS=-lGL -lGLU -lglut -lpthread -lavcodec -lavformat
+LDFLAGS=-lGL -lGLU -lSDL -lpthread -lavcodec -lavformat
 
 display: display.o subnets.o video.o $(COMMON)/flowdata.o 
 
-display.o: display.c $(COMMON)/flowdata.h pixelmapping.h video.h subnets.h
+display.o: display.c $(COMMON)/flowdata.h pixelmapping.h video.h subnets.h text.c
 
 subnets.o: subnets.c subnets.h
 

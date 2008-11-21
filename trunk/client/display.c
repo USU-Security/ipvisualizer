@@ -6,7 +6,7 @@
  */
 
 
-#include <GL/glut.h>
+#include <SDL/SDL.h>
 #include <GL/glu.h>
 #include <sys/time.h>
 #include <pthread.h>
@@ -21,6 +21,7 @@
 #include "video.h"
 #include "subnets.h"
 #include <unistd.h>
+#include "text.h"
 
 #define IMGWIDTH 1024
 #define IMGHEIGHT 1024
@@ -58,10 +59,11 @@ float scalex, scaley;
 char displaystring[DISPLAYSTRINGSIZE];
 int displayx=0, displayy=0;
 unsigned int serverip = 23597484;
+SDL_Surface * screen;
 char videostate=0;
 
 /* prototypes */
-void idle();
+int  idle();
 void display();
 void* collect_data(void* p);
 void initbuffer();
@@ -75,6 +77,8 @@ unsigned short fwd_netblock(unsigned short);
 unsigned short rev_netblock(unsigned short);
 void update_menubar();
 inline unsigned short mappixel(unsigned short ip);
+void sdl_eventloop();
+
 /**
  * Where execution begins. Duh.
  * */
@@ -96,24 +100,24 @@ int main(int argc, char** argv)
 	glEnable(GL_TEXTURE_2D);
 	gettimeofday(&inittime, 0);
 	initbuffer();
-	glutInit(&argc, argv);
-	glutInitWindowSize(IMGWIDTH,IMGHEIGHT);
-	glutInitDisplayMode(GLUT_DOUBLE | GLUT_RGB);
-	glutCreateWindow("simple");
-	glutDisplayFunc(display);
-	glutReshapeFunc(reshape); 
-	/* glBlendFunc(GL_SRC_ALPHA,GL_ONE_MINUS_SRC_ALPHA); */
-	glutIdleFunc(idle);
-	/* glutKeyboardFunc(keydown); */
-	glutKeyboardUpFunc(keyup); 
-	/* glutSpecialFunc(specialkeydown); */
-	/* glutSpecialUpFunc(specialkeyup); */
-	glutPassiveMotionFunc(mousemove);
+	SDL_Init(SDL_INIT_VIDEO);
+	atexit(SDL_Quit);
+	
+	SDL_GL_SetAttribute(SDL_GL_DOUBLEBUFFER, 1);
+	/* get a video mode */
+	
+	screen = SDL_SetVideoMode(512, 512, 32, SDL_RESIZABLE|SDL_OPENGL);
+	//screen = SDL_SetVideoMode(512, 512, 32, SDL_RESIZABLE|SDL_OPENGL);
+	//screen = SDL_SetVideoMode(modes[0]->w, modes[0]->h, 32,       SDL_FULLSCREEN|SDL_DOUBLEBUF|SDL_HWSURFACE|SDL_OPENGL);
 
-#ifdef FULLSCREEN
-	/* switch to fullscreen mode */
-	glutFullScreen();
-#endif
+	if (!screen) 
+	{
+		printf("Unable to create the screen\n");
+		return 1;
+	}
+	
+//	reshape(modes[0]->w, modes[0]->h);	
+	reshape(screen->w, screen->h);	
 
 	/* start up our thread that listens for data */
 	int e;
@@ -121,9 +125,52 @@ int main(int argc, char** argv)
 	if ((e = pthread_create(&pid, NULL, collect_data, NULL)))
 		printf("Error while creating thread: %s", strerror(e));
 	else 
-		glutMainLoop();
+		sdl_eventloop();
+
+	SDL_Quit();
 	return 0;
 }
+
+/*
+ * function:	sdl_eventloop()
+ * purpose:		to listen for sdl events
+ */
+void sdl_eventloop()
+{
+	SDL_Event event;
+	while (!dead)
+	{ 
+		if (SDL_PollEvent(&event)) 
+		{
+			switch (event.type)
+			{
+			case SDL_KEYUP:
+				keyup(event.key.keysym.sym, 0, 0);				
+				/* keypresses */
+				break;
+			case SDL_QUIT:
+				dead= 1;
+				break;
+			case SDL_VIDEORESIZE:
+				screen = SDL_SetVideoMode(event.resize.w, event.resize.h,  32, SDL_RESIZABLE|SDL_OPENGL);
+				reshape(event.resize.w, event.resize.h);
+				break;
+			case SDL_MOUSEMOTION:
+				mousemove(event.motion.x, event.motion.y);
+				break;
+			default:
+				break;
+			}
+		}
+		else 
+		{
+			/* idle will sleep if it can tell we have lots of time to spare */
+			if (idle())
+				display();		
+		}
+	}
+}
+
 
 /*
  * function:	displaymsg()
@@ -177,72 +224,111 @@ void videoon(char b)
 }
 		
 
+void togglefullscreen() 
+{
+	static fullscreen = 0;
+	if (fullscreen) 
+	{
+		screen = SDL_SetVideoMode(512, 512, 32, SDL_RESIZABLE|SDL_OPENGL);
+		reshape(512, 512); 
+		fullscreen = 0;
+	}
+	else
+	{
+		SDL_Rect ** modes = SDL_ListModes(NULL, SDL_FULLSCREEN);
+
+		if (!modes) 
+		{
+			printf("unable to obtain a list of video modes\n");
+		}
+		else 
+		{
+			screen = SDL_SetVideoMode(modes[0]->w, modes[0]->h, 32, SDL_RESIZABLE|SDL_OPENGL|SDL_FULLSCREEN);
+			reshape(modes[0]->w, modes[0]->h);
+			fullscreen = 1;
+		}
+	}
+		
+}
+
+
 void keyup(unsigned char k, int x, int y)
 {
+	/* get the keyboard state */
+	Uint8 *keys = SDL_GetKeyState(NULL);
 	switch (k) {
-	case 'm': /* ip mapping */
+	case SDLK_m: /* ip mapping */
 		snprintf(displaystring, DISPLAYSTRINGSIZE, "Changed Mapping");
 		mapping++;
 		initbuffer();
 		break;
-	case 'f': /* fade rate */
-		FADERATE+=3;
-		FADERATE = FADERATE % 256;
-		snprintf(displaystring, DISPLAYSTRINGSIZE, 
-			"Fade Rate set to %i", FADERATE);
+	case SDLK_f: /* fade rate */
+		if (keys[SDLK_LSHIFT] || keys[SDLK_RSHIFT]) {
+			FADERATE-=3;
+			FADERATE = (FADERATE + 256) % 256;
+			snprintf(displaystring, DISPLAYSTRINGSIZE, 
+				"Fade Rate set to %i", FADERATE);
+		} else {
+			FADERATE+=3;
+			FADERATE = FADERATE % 256;
+			snprintf(displaystring, DISPLAYSTRINGSIZE, 
+				"Fade Rate set to %i", FADERATE);
+		}
 		break;
-	case 'F': /* fade rate */
-		FADERATE-=3;
-		FADERATE = (FADERATE + 256) % 256;
-		snprintf(displaystring, DISPLAYSTRINGSIZE, 
-			"Fade Rate set to %i", FADERATE);
+	case SDLK_j: /* jump rate */
+		if (keys[SDLK_LSHIFT] || keys[SDLK_RSHIFT]) {
+			JUMPRATE -= 10;
+			JUMPRATE = (JUMPRATE+256) % 256;
+			snprintf(displaystring, DISPLAYSTRINGSIZE, 
+				"Jump Rate changed to %i",JUMPRATE );
+		} else {
+			JUMPRATE += 10;
+			JUMPRATE = JUMPRATE % 256;
+			snprintf(displaystring, DISPLAYSTRINGSIZE, 
+				"Jump Rate changed to %i",JUMPRATE );
+		}
 		break;
-	case 'j': /* jump rate */
-		JUMPRATE += 10;
-		JUMPRATE = JUMPRATE % 256;
-		snprintf(displaystring, DISPLAYSTRINGSIZE, 
-			"Jump Rate changed to %i",JUMPRATE );
-		break;
-	case 'J': /* jump rate */
-		JUMPRATE -= 10;
-		JUMPRATE = (JUMPRATE+256) % 256;
-		snprintf(displaystring, DISPLAYSTRINGSIZE, 
-			"Jump Rate changed to %i",JUMPRATE );
-		break;
-	case 'c': /* clear the screen */
+	case SDLK_c: /* clear the screen */
 		initbuffer();
 		break;
-	case 'i':
-		SHOW_IN = 1;
-		snprintf(displaystring, DISPLAYSTRINGSIZE, 
-			"Showing incoming packets" );
-		break;
 	case 'I':
-		SHOW_IN = 0;
-		snprintf(displaystring, DISPLAYSTRINGSIZE, 
-			"Not showing incoming packets" );
+		if (keys[SDLK_LSHIFT] || keys[SDLK_RSHIFT]) {
+			SHOW_IN = 0;
+			snprintf(displaystring, DISPLAYSTRINGSIZE, 
+				"Not showing incoming packets" );
+		} else {
+			SHOW_IN = 1;
+			snprintf(displaystring, DISPLAYSTRINGSIZE, 
+				"Showing incoming packets" );
+		}
 		break;
-	case 'o':
-		SHOW_OUT = 1;
-		snprintf(displaystring, DISPLAYSTRINGSIZE, 
-			"Showing outgoing packets" );
+	case SDLK_o:
+		if (keys[SDLK_LSHIFT] || keys[SDLK_RSHIFT]) {
+			SHOW_OUT = 0;
+			snprintf(displaystring, DISPLAYSTRINGSIZE, 
+		 		"Not showing outgoing packets" );
+		} else {
+			SHOW_OUT = 1;
+			snprintf(displaystring, DISPLAYSTRINGSIZE, 
+				"Showing outgoing packets" );
+		}
 		break;
-	case 'O':
-		SHOW_OUT = 0;
-		snprintf(displaystring, DISPLAYSTRINGSIZE, 
-			"Not showing outgoing packets" );
-		break;
-	case 'q':
-	case 'Q':
+	case SDLK_q:
 		videoon(0);
 		exit(0);
 		break;
-	case 'V':
-		videoon(1);
+	case SDLK_v:
+		if (keys[SDLK_LSHIFT] || keys[SDLK_RSHIFT]) 
+			videoon(1);
+		else
+			videoon(0);
 		break;
-	case 'v':
-		videoon(0);
+	case SDLK_RETURN:
+		if (keys[SDLK_RALT] || keys[SDLK_LALT])
+			togglefullscreen();
 		break;
+	default:
+		printf("Not handling key 0x%2X '%s'\n", (int)k, SDL_GetKeyName(k));
 	}		
 	mappixel(0); 
 	update_menubar();
@@ -515,8 +601,9 @@ void fade()
 
 /**
  * where idling happens
+ * returns:	true if the screen should be redrawn
  */
-void idle ()
+int idle()
 {
 	static float ti = 0;
 	static int counter =0;
@@ -526,24 +613,63 @@ void idle ()
 		exit(0);
 	}
 
-	if (timer() - ti > .041666666666666666666)
+	double now = timer();
+
+	if (now - ti < FRAMERATE)
+		/* sleep the remaining time */
+		usleep(((FRAMERATE - (timer()-ti)) * 1000000));
+	
+	fade();
+	ti = now;
+	counter++;
+	if (counter >= 24 * HEARTBEAT) 
 	{
-		fade();
-		glutPostRedisplay();
-		ti = timer();
-		counter++;
-		if (counter >= 24 * HEARTBEAT) 
-		{
-			pulldata(1);
-			counter = 0;
-		}
+		pulldata(1);
+		counter = 0;
 	}
+	return 1;
+	 
+	return 0;
 }
 
-void renderstring(const char* s)
+inline renderstring(const char* s)
 {
+/*	while (*s)
+		glutBitmapCharacter(GLUT_BITMAP_8_BY_13, *(s++)); */
+	/* gimp_image is a struct that contains our bitmap */
+	/* the bitmap is ascii characters 32-127 arranged vertically */
+	/*
+	const int pixheight = gimp_image.height / (127-32);
 	while (*s)
-		glutBitmapCharacter(GLUT_BITMAP_8_BY_13, *(s++));
+	{
+		glRasterPos2d(x, y);
+		x += gimp_image.width;
+		glDrawPixels(gimp_image.width, 
+					pixheight, 
+					gimp_image.bytes_per_pixel == 4 ? GL_RGBA : GL_RGB,
+					GL_UNSIGNED_BYTE,
+					gimp_image.pixel_data + (*(s++) - 32) * (pixheight * gimp_image.width * gimp_image.bytes_per_pixel)
+					);
+	}
+	*/
+	/* attempt #4 */
+	glPushClientAttrib( GL_CLIENT_PIXEL_STORE_BIT );
+	glPixelStorei( GL_UNPACK_SWAP_BYTES,  GL_FALSE );
+	glPixelStorei( GL_UNPACK_LSB_FIRST,   GL_FALSE );
+	glPixelStorei( GL_UNPACK_ROW_LENGTH,  0        );
+	glPixelStorei( GL_UNPACK_SKIP_ROWS,   0        );
+	glPixelStorei( GL_UNPACK_SKIP_PIXELS, 0        );
+	glPixelStorei( GL_UNPACK_ALIGNMENT,   1        );
+
+	while (*s)
+	{
+		glBitmap(8, 13,
+			0, 0, 
+			8, 0,
+			Fixed8x13Font[*(s++)-32] + 1
+			);
+	}
+	glPopClientAttrib();
 }
 
 /*
@@ -567,12 +693,15 @@ void display()
 	glDrawPixels(IMGWIDTH, IMGHEIGHT, GL_BGR, GL_UNSIGNED_BYTE, imgdata); 
 #endif
 	pthread_mutex_unlock(&imglock);
+	if (glGetError()) {
+		printf("errors drawing to the screen\n");
+		return 1;
+	}
 	/* insert unlock here */
-	
-	glRasterPos2i(displayx,displayy);
+	glRasterPos2i(displayx, displayy);	
 	renderstring(displaystring);
 
-	glutSwapBuffers();
+	SDL_GL_SwapBuffers();
 }
 
 /*
@@ -690,8 +819,7 @@ void updatesubnets(struct subnetpacket* sp)
 
 /*
  * function:	collect_data()
- * purpose:		collects data to draw. this is a separate thread because i didn't
- * 				want to use glut callback foo to do this, its too risky.
+ * purpose:		collects data to draw. this is a separate thread
  */
 void* collect_data(void* p)
 {
@@ -795,6 +923,6 @@ void update_menubar()
 			SHOW_OUT?"outgoing":"", map_string, FADERATE,
 			JUMPRATE);
 
-	glutSetWindowTitle(menubuf);
+	/* glutSetWindowTitle(menubuf); */
 	return;
 }

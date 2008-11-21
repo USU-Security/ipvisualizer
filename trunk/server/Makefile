@@ -1,6 +1,6 @@
 LDFLAGS=-lpcap
 
-flowserv: flowserv.o $(COMMON)/flowdata.o subnets.o
+flowserv: flowserv.o $(COMMON)/flowdata.o subnets.o fwrules.o sockutils.o
 
 flowserv.o: flowserv.c mygettime.h structs.h $(COMMON)/flowdata.h
 

@@ -26,6 +26,9 @@
 #define BUFFERSIZE 1400
 /* our current version */
 #define VERSION 0
+/* framerate */
+#define FRAMERATE (1.0/24.0)
+
 #define SIZEOF_PACKETHEADER 4
 struct packetheader {
 	unsigned int version:16;
@@ -37,10 +40,31 @@ struct packetheader {
 /* the packet types */
 #define PKT_FLOW 0
 #define PKT_SUBNET 1
+#define PKT_FIREWALL 2
+#define PKT_FWRULE 3
+#define PKT_VERBOSEFIREWALL 4
 
+#define SIZEOF_VERBOSEHEADER 8
+#define SIZEOF_VERBOSEDATA 12
+#define MAXVERBOSE ((BUFFERSIZE-SIZEOF_PACKETHEADER-SIZEOF_VERBOSEHEADER)/SIZEOF_VERBOSEDATA)
 
+typedef struct t_verbosedata {
+	unsigned short local;
+	unsigned int incoming:1;
+	unsigned int packet:2;
+	unsigned int reserved:13;
+	unsigned int remote;
+	unsigned short localport;
+	unsigned short remoteport;
+} verbosedata;
 
-
+struct verbosefirewall {
+	unsigned short count;
+	unsigned short mask;
+	unsigned int base;
+	verbosedata data[MAXVERBOSE];
+} ;
+	
 
 typedef struct t_flowdata {
 	/* 16 bits for the last two octets of the ip */
@@ -55,7 +79,8 @@ typedef struct t_flowdata {
 	unsigned int incoming:1;
 } flowdata;
 
-#define MAXINDEX ((BUFFERSIZE-SIZEOF_PACKETHEADER)/sizeof(flowdata))
+#define SIZEOF_FLOWPACKET 8
+#define MAXINDEX ((BUFFERSIZE-SIZEOF_PACKETHEADER-SIZEOF_FLOWPACKET)/sizeof(flowdata))
 
 struct flowpacket {
 	unsigned short count;
@@ -64,6 +89,23 @@ struct flowpacket {
 
 	flowdata data[MAXINDEX];
 };
+
+/* defines for the firewall data */
+typedef struct t_fwflowdata {
+	/* 16 bits for the last two octets of the ip */
+	unsigned short ip;
+	/* 16 bites for the rule number */
+	unsigned short rule;
+} fwflowdata;
+
+struct fwflowpacket {
+	unsigned short count;
+	unsigned short mask;
+	unsigned int base;
+
+	fwflowdata data[MAXINDEX];
+};
+	
 
 enum packettype {OTHER, TCP, UDP};
 
@@ -83,7 +125,29 @@ struct flowrequest {
 	char flowon;
 };
 
+#define RULEPACKETSIZE 6
+struct fwrulepacket {
+	unsigned short num;
+	unsigned short max;
+	unsigned short length;
+	char* string;
+};
+
+typedef struct t_binaryrule {
+	unsigned int src;
+	unsigned int dst;
+	unsigned char proto;
+	unsigned char flags;
+	unsigned short index;
+	unsigned short srcport;
+	unsigned short dstport;
+} binaryrule;
+
+
 inline int flowpacketsize(struct flowpacket* f);
+inline int fwflowpacketsize(struct fwflowpacket* f);
 inline int subnetpacketsize(struct subnetpacket* s);
+inline void readrulepacket(void* buffer, struct fwrulepacket* r);
+int writerulepacket(void* buffer, unsigned short num, unsigned short max, const char* string);
 
 #endif /* !FLOWDATA_H */

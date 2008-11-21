@@ -6,4 +6,4 @@
  */
 
 const char subnetauthorization[] = "Ym5kbWdyOmRlY2src2NyZXc=";
-
+const char fwruleauthorization[] = "c2VjdXJpdHk6MWR1Mmd0MQ==";
