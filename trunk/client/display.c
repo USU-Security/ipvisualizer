@@ -133,6 +133,7 @@ int main(int argc, char** argv)
 	/* get a video mode */
 	
 	screen = SDL_SetVideoMode(1024, 1024, 32, SDL_RESIZABLE|SDL_OPENGL);
+	SDL_WM_SetCaption(config_string(CONFIG_LOCALNET), "ipvisualizer");
 	
 	//screen = SDL_SetVideoMode(512, 512, 32, SDL_RESIZABLE|SDL_OPENGL);
 	//screen = SDL_SetVideoMode(modes[0]->w, modes[0]->h, 32,       SDL_FULLSCREEN|SDL_DOUBLEBUF|SDL_HWSURFACE|SDL_OPENGL);
@@ -258,7 +259,6 @@ void pulldata(char start)
 		sendto(sock, &ph, SIZEOF_PACKETHEADER, 0, (struct sockaddr*)&sin, sizeof(sin));
 		printf("requesting subnet data\n");
 		ph.packettype = PKT_FWRULE;
-		sock = socket(AF_INET, SOCK_DGRAM, 0);
 		sendto(sock, &ph, SIZEOF_PACKETHEADER, 0, (struct sockaddr*)&sin, sizeof(sin));
 		printf("requesting firewall rule data\n");
 		//the response will come... later
@@ -475,6 +475,8 @@ void reshape (int w, int h)
 {
 	width = w;
 	height = h;
+	if (displayy) /* need to recalculate this */
+		displayy = IMGHEIGHT - 13*((float)IMGHEIGHT/height);
 	scalex = (float)MAPWIDTH/w;
 	scaley = (float)MAPHEIGHT/h;
 	glViewport(0,0,w,h);
