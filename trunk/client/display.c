@@ -871,7 +871,7 @@ void update_image(struct flowpacket* fp)
 	if (max > MAXINDEX)
 		max = MAXINDEX; /* watch those externally induced overflows */
 	/* fp->base may not be the same as localip. if not, we need to offset it to match. */
-	unsigned int diff = localip - fp->base;
+	unsigned int diff = fp->base - localip;
 		
 	/* lock it up */
 	pthread_mutex_lock(&imglock);
