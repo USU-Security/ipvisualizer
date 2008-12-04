@@ -316,7 +316,7 @@ int main(int argc, char* argv[])
 	initglobals();
 	char ebuff[PCAP_ERRBUF_SIZE];
 	subnet subarray[MAXINDEX];
-	int i;
+	int i, j;
 	subnets = (struct subnetpacket*)cachedsubnets.data;
 	cachedsubnets.version = VERSION;
 	cachedsubnets.packettype = PKT_SUBNET;
@@ -324,12 +324,17 @@ int main(int argc, char* argv[])
 	int numsubnets = getsubnets(subarray, MAXINDEX, config_string(CONFIG_SUBNET), config_string(CONFIG_AUTH));
 	if (numsubnets > MAXINDEX) 
 		numsubnets = MAXINDEX;
+	j = 0;
 	for (i = 0; i < numsubnets; i++) {
-		/*mask off the subnets according to our local mask, since /16 is limit*/
-		subnets->subnets[i].base = subarray[i].base & ~localmask;
-		subnets->subnets[i].mask = subarray[i].mask;
+		/* only report the subnets if they are within our range */
+		if ((subarray[i].base & localmask) == localip) {
+			/*mask off the subnets according to our local mask, since /16 is limit*/
+			subnets->subnets[j].base = subarray[i].base & ~localmask;
+			subnets->subnets[j].mask = subarray[i].mask;
+			j++;
+		}
 	}
-	subnets->count = numsubnets;
+	subnets->count = j;
 	subnets->base = localip;
 	subnets->mask = localmask;
 	printf("Recieved information about %i subnets\n", numsubnets);
