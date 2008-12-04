@@ -15,6 +15,7 @@ unsigned int b_shift_rev;
 unsigned int b_mask_rev;
 unsigned int localip;
 unsigned int localmask;
+unsigned short serverport;
 
 void initunconstants()
 {
@@ -27,7 +28,7 @@ void initunconstants()
 		MAPWIDTH = MAPHEIGHT << 1;
 	else
 		MAPWIDTH = MAPHEIGHT;
-	
+	serverport = config_int(CONFIG_PORT);
 	//these depend on the size of the screen
 	screensize(1024, 1024);
 }

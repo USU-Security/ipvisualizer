@@ -13,6 +13,7 @@ extern float BLOCKWIDTH; /* IMGWIDTH/MAPWIDTH */
 extern float BLOCKHEIGHT; /* IMGHEIGHT/MAPHEIGHT */
 extern unsigned int localip;
 extern unsigned int localmask;
+extern unsigned short serverport;
 
 /* variables cached globally */
 extern unsigned int a_shift;

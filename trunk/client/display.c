@@ -43,6 +43,7 @@ int mapping = 2;
 int pausedisplay = 0;
 int displayrules = 1;
 const char moviefile[] = "output.avi";
+int sock = 0;
 
 struct timeval inittime;
 volatile int die=0;
@@ -149,7 +150,10 @@ int main(int argc, char** argv)
 	glBindTexture(GL_TEXTURE_2D, texture);
 	glTexParameterf(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_LINEAR);
 	glTexParameterf(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_NEAREST);
-	
+
+	/* request the initial data */
+	pulldata(0);
+
 	/* start up our thread that listens for data */
 	int e;
 	pthread_t pid;
@@ -238,14 +242,13 @@ void displaymsg(const char* s)
  */
 void pulldata(char start)
 {
-	static int sock = 0;
 	struct packetheader ph;
 	struct flowrequest* fr = (struct flowrequeset*)ph.data;
 	
 	fr->flowon = start;
 	struct sockaddr_in sin;
 	sin.sin_family = AF_INET;
-	sin.sin_port = htons(config_int(CONFIG_PORT));
+	sin.sin_port = htons(serverport);
 	sin.sin_addr.s_addr = serverip;
 	ph.version = VERSION;
 	if (!sock)
@@ -1048,28 +1051,26 @@ void* collect_data(void* p)
 	memset(&addr, 0, sizeof(addr));
 
 	addr.sin_family = AF_INET;
-	addr.sin_port = htons(config_int(CONFIG_PORT));
+	addr.sin_port = htons(serverport);
+	addr.sin_addr.s_addr = serverip;
 
-	addr.sin_addr.s_addr = INADDR_ANY;
-
-	s = socket(AF_INET, SOCK_DGRAM, 0);
-
-	if (!s)
+	if (!sock)
 	{
 		dead = 1;
 		return 0;
 	}
-
+	/*
 	if (bind(s, (struct sockaddr*)&addr, sizeof(addr)))
 	{
 		dead = 1;
 		return 0;
 	}
-
+	*/
+	socklen_t addrlen = sizeof(addr);
 	struct packetheader ph;
 	while (!die)
 	{
-		read(s, &ph, sizeof(ph));
+		recvfrom(sock, &ph, sizeof(ph), 0, (struct sockaddr*)&addr, &addrlen);
 		switch (ph.packettype)
 		{
 		case PKT_FLOW:

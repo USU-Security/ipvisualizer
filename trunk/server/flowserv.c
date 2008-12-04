@@ -51,12 +51,15 @@ struct subnetpacket* subnets;
 struct packetheader cachedsubnets;
 struct fwrule* firewallrules;
 int numfwrules;
-unsigned int clients[MAXCLIENTS] = {0};
-unsigned int timeouts[MAXCLIENTS] = {0};
+struct {
+	unsigned int ip;
+	unsigned short port;
+} clients[MAXCLIENTS] = {{0,0}};
+time_t timeouts[MAXCLIENTS] = {0};
 int sendsock;
 int numclients = 0;
 
-void delclient(unsigned int ip);
+void delclient(unsigned int ip, unsigned short port);
 
 /*
  * function:	sendclients()
@@ -68,13 +71,13 @@ inline void sendclients(void* data, int dlen)
 	int i;
 	struct sockaddr_in sin;
 	sin.sin_family = AF_INET;
-	sin.sin_port = htons(PORT);
 	for (i = 0; i < MAXCLIENTS; i++) {
-		if (clients[i]) {
+		if (clients[i].ip) {
 			if (timeouts[i] < time(0)) {
-				delclient(clients[i]);
+				delclient(clients[i].ip, clients[i].port);
 			} else {
-				sin.sin_addr.s_addr = clients[i];
+				sin.sin_addr.s_addr = clients[i].ip;
+				sin.sin_port = clients[i].port;
 				int len = sendto(sendsock, data, 
 						dlen, 
 						0, (struct sockaddr*)&sin, sizeof(sin));
@@ -95,7 +98,6 @@ inline void sendclients(void* data, int dlen)
  * recieves:	a client struct
  */
 inline void flushbuffer() {
-	int i;
 	sendclients(&flowbuffer, flowpacketsize(buffer) + SIZEOF_PACKETHEADER);
 	lastupdate = gettime();
 	buffer->count = 0;
@@ -142,20 +144,26 @@ void report(unsigned int src, unsigned int dst, unsigned short size, enum packet
  * recieves:	the ip of a client, in network byte order
  * returns:		whether or not the client was added
  */
-int addclient(unsigned int ip)
+int addclient(unsigned int ip, unsigned short port)
 {
+	if (!port)
+		port = localport; /* the default */
 	int i;
 	for (i = 0; i < MAXCLIENTS; i++)
 	{
-		if (clients[i] == ip)
+		if (clients[i].ip == ip && clients[i].port == port)
 		{
 			timeouts[i] = time(0) + TIMEOUT;
 			return 1;
 		}
-		else if (!clients[i])
+	}
+	for (i = 0; i < MAXCLIENTS; i++)
+	{
+		if (!clients[i].ip)
 		{
 			printf("added a client\n");
-			clients[i] = ip;
+			clients[i].ip = ip;
+			clients[i].port = port;
 			timeouts[i] = time(0) + TIMEOUT; 
 			numclients++;
 			return 1;
@@ -169,15 +177,17 @@ int addclient(unsigned int ip)
  * purpose:		to delete a client
  * recieves:	the ip of a client, in network byte order
  */
-void delclient(unsigned int ip)
+void delclient(unsigned int ip, unsigned short port)
 {
 	int i;
+	if (port == 0)
+		port = localport;
 	for (i = 0; i < MAXCLIENTS; i++)
 	{
-		if (clients[i] == ip)
+		if (clients[i].ip == ip && clients[i].port == port)
 		{
 			printf("removed a client\n");
-			clients[i] = 0;
+			clients[i].ip = 0;
 			numclients--;
 			break;
 		}
@@ -201,7 +211,7 @@ int initnetworkbyhost(const char* host)
 		return 0;
 	
 	//memcpy(&addr.sin_addr, he->h_addr_list[0], sizeof(struct in_addr));
-	return addclient(*(int*)he->h_addr_list[0]);
+	return addclient(*(int*)he->h_addr_list[0], 0);
 }
 
 /* 
@@ -266,7 +276,6 @@ void checklisten(int listen)
 	addr.sin_addr.s_addr = INADDR_ANY;
 	socklen_t fromlen = sizeof(addr);
 	int err;
-	int i;
 	if ((err = recvfrom(listen, &ph, sizeof(ph), MSG_DONTWAIT, 
 		(struct sockaddr*)&addr, &fromlen)) > 0)
 	{
@@ -275,9 +284,9 @@ void checklisten(int listen)
 		case PKT_FLOW:
 			fr = (struct flowrequest*)ph.data;
 			if (fr->flowon) 
-				addclient(addr.sin_addr.s_addr);
+				addclient(addr.sin_addr.s_addr, addr.sin_port);
 			else 
-				delclient(addr.sin_addr.s_addr);
+				delclient(addr.sin_addr.s_addr, addr.sin_port);
 			break;
 		case PKT_SUBNET:
 			printf("Recieved a subnet request\n");
@@ -316,12 +325,12 @@ int main(int argc, char* argv[])
 	initglobals();
 	char ebuff[PCAP_ERRBUF_SIZE];
 	subnet subarray[MAXINDEX];
-	int i, j;
+	unsigned int i, j;
 	subnets = (struct subnetpacket*)cachedsubnets.data;
 	cachedsubnets.version = VERSION;
 	cachedsubnets.packettype = PKT_SUBNET;
 	
-	int numsubnets = getsubnets(subarray, MAXINDEX, config_string(CONFIG_SUBNET), config_string(CONFIG_AUTH));
+	unsigned int numsubnets = getsubnets(subarray, MAXINDEX, config_string(CONFIG_SUBNET), config_string(CONFIG_AUTH));
 	if (numsubnets > MAXINDEX) 
 		numsubnets = MAXINDEX;
 	j = 0;

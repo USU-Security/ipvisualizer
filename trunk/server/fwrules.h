@@ -9,4 +9,5 @@ struct fwrule
 };
 
 struct fwrule* getfwrules(const char* site, const char* webpage, const char* authentication, int* numrules);
+void freefwrules(struct fwrule* head);
 
