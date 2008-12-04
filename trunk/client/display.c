@@ -49,10 +49,6 @@ volatile int die=0;
 volatile int dead=0;
 pthread_mutex_t imglock = PTHREAD_MUTEX_INITIALIZER;
 
-/*
-unsigned char imgdata[IMGWIDTH*IMGHEIGHT][COLORDEPTH] = {{0}};
-struct datapoint pointdata[MAPWIDTH*MAPHEIGHT];
-*/
 unsigned char *imgdata = NULL;
 struct datapoint* pointdata = NULL;
 
@@ -60,7 +56,7 @@ int width, height;
 float scalex, scaley;
 char displaystring[DISPLAYSTRINGSIZE];
 int displayx=0, displayy=0;
-unsigned int serverip = 0x0100007f; //default of 127.0.0.1
+unsigned int serverip = 0x0100007f; //default of 127.0.0.1: nonfunctional until ports change
 SDL_Surface * screen;
 char videostate=0;
 const char* rules[65536] = {0};
@@ -444,7 +440,7 @@ void mousemove(int x, int y)
 	if (y < MAPHEIGHT/2)
 		displayy = 0;
 	else
-		displayy =  IMGHEIGHT - 13;
+		displayy =  IMGHEIGHT - 13*((float)IMGHEIGHT/height);
 	
 	unsigned short mappixel = x + ((MAPHEIGHT - y - 1) * MAPWIDTH);
 	unsigned int ip = unmappixel(mappixel);
