@@ -292,7 +292,6 @@ void checklisten(int listen)
 			printf("Recieved a subnet request\n");
 			sp = (struct subnetpacket*)ph.data;
 			subnets->requestnum = sp->requestnum;
-			addr.sin_port = htons(localport);
 			sendto(listen, &cachedsubnets, subnetpacketsize(subnets) + SIZEOF_PACKETHEADER, 0, (struct sockaddr*)&addr, fromlen);
 			printf("Sent subnet information\n");
 			break;
