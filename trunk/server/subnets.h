@@ -9,7 +9,7 @@ typedef struct subnet_t {
 
 #define SUBSTRUCT_SIZE 5
 
-int getsubnets(subnet* subnets, int max, const char* site, const char* webpage, const char* authentication);
+int getsubnets(subnet* subnets, int max, const char* webpage, const char* authentication);
 
 
 

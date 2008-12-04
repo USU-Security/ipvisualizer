@@ -320,21 +320,8 @@ int main(int argc, char* argv[])
 	subnets = (struct subnetpacket*)cachedsubnets.data;
 	cachedsubnets.version = VERSION;
 	cachedsubnets.packettype = PKT_SUBNET;
-	if (argc < 2) {
-		fprintf(stderr, "usage: %s <network-device> [hostname+]\n", argv[0]);
-		return 1;
-	}
 	
-	//parse out the server and the path individually
-	const char* path = config_string(CONFIG_SUBNET);
-	char server[512];
-	while (path[i+7] != '/' && i < 511) {
-		server[i] = path[i+7];
-		i++;
-	}
-	server[i] = 0;
-
-	int numsubnets = getsubnets(subarray, MAXINDEX, server, path + i, config_string(CONFIG_AUTH));
+	int numsubnets = getsubnets(subarray, MAXINDEX, config_string(CONFIG_SUBNET), config_string(CONFIG_AUTH));
 	if (numsubnets > MAXINDEX) 
 		numsubnets = MAXINDEX;
 	for (i = 0; i < numsubnets; i++) {

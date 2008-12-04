@@ -1,4 +1,4 @@
-LDFLAGS=-lpcap
+LDFLAGS=-lpcap `curl-config --libs`
 
 flowserv: flowserv.o $(COMMON)/flowdata.o subnets.o fwrules.o sockutils.o globals.o $(COMMON)/config.o base64.o
 

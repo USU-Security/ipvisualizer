@@ -14,61 +14,67 @@
 #include <unistd.h>
 #include "sockutils.h"
 #include "base64.h"
+#include <curl/curl.h>
+
+CURL* curlhandle=NULL;
+
+typedef struct _sinfo {
+    subnet* subnets;
+    int max;
+    int size;
+} sinfo;
+
+size_t write_data(void* buffer, size_t size, size_t nmemb, void* userp)
+{
+    sinfo* s = (sinfo*)userp;
+    unsigned int cur = 0;
+    while ( cur < size * nmemb )
+    {
+        memcpy(&(s->subnets[s->size++]), buffer + cur, SUBSTRUCT_SIZE);
+        cur += SUBSTRUCT_SIZE;
+        if (s->size >= s->max)
+            break;
+    }
+    return cur;
+}
+
+void cleanup()
+{
+    if (curlhandle)
+        curl_easy_cleanup(curlhandle);
+}
+
 
 /*
- * function:	getsubnets()
- * purpose:		to retrieve a list of subnets from a web page
- * recieves:	a pointer to an array of subnets, the size of the array,
- * 				the server to get the list from, the path to the page,
- * 				and the authorization required to log into the website as a
- * 				username:password mime-encoded string. 
+ * function:    getsubnets()
+ * purpose:     to retrieve a list of subnets from a web page
+ * recieves:    a pointer to an array of subnets, the size of the array,
+ *              the server to get the list from, the path to the page,
+ *              and the authorization required to log into the website as a
+ *              username:password mime-encoded string. 
  */
-int getsubnets(subnet subnets[], int max, const char* site, const char* webpage, const char* authentication)
+int getsubnets(subnet subnets[], int max, const char* webpage, const char* authentication)
 {
-	int sock;
-	struct sockaddr_in serv_addr;
-	struct hostent *he;
-	sock = socket(AF_INET, SOCK_STREAM, 0);
-	memset(&serv_addr, 0, sizeof(serv_addr));
-	serv_addr.sin_family = AF_INET;
-	serv_addr.sin_port = htons(80);
-	if (!(he = gethostbyname(site)))
-	{
-		fprintf(stderr, "That is a bad ip address or hostname\n");
-		return -2;
-	}
+    if (curlhandle == 0)
+    {
+        if (!(curlhandle = curl_easy_init()))
+            return 0;
+        atexit(cleanup);
+        curl_easy_setopt(curlhandle, CURLOPT_SSL_VERIFYHOST, NULL);
+    }
+    sinfo subnetlist;
+    subnetlist.subnets = subnets;
+    subnetlist.max = max;
+    subnetlist.size = 0;
+    curl_easy_setopt(curlhandle, CURLOPT_URL, webpage);
+    curl_easy_setopt(curlhandle, CURLOPT_USERPWD, authentication);
+    curl_easy_setopt(curlhandle, CURLOPT_WRITEFUNCTION, write_data);
+    curl_easy_setopt(curlhandle, CURLOPT_WRITEDATA, &subnetlist);
 
+    //and do it...
+    curl_easy_perform(curlhandle);
 
-	memcpy(&serv_addr.sin_addr, he->h_addr_list[0], sizeof(struct in_addr));
-
-	char auth[512] = {0};
-	int authsize=512;
-	base64encode(authentication, strlen(authentication), auth, &authsize);
-
-
-	connect(sock, (struct sockaddr*)&serv_addr, sizeof(serv_addr));
-
-	write(sock, "GET ", 4);
-	write(sock, webpage, strlen(webpage));
-	write(sock, " HTTP 1.1\n", 10);
-	write(sock, "Authorization: Basic ", 21);
-	write(sock, auth, authsize);
-	write(sock, "\n\n", 2);
-
-	char buffer[80] = {0};
-	readstring(sock, buffer, 80);
-	if (!strstr(buffer, "200")) /* check for OK response */
-	{
-		fprintf(stderr, "Unable to get the subnet data\n");
-		close(sock);
-		return 0;
-	}
-	/* read through the header crap */
-	while (readstring(sock, buffer, 80));
-
-	int size=0;
-	while (size < max && (read(sock, &subnets[size], SUBSTRUCT_SIZE) == SUBSTRUCT_SIZE))
-		size++;
-	return size;
+    return subnetlist.size;
 }
+
 
