@@ -9,8 +9,6 @@
 #ifndef FLOWDATA_H
 #define FLOWDATA_H
 
-
-#define NETBASE ((129<<24)|(123<<16)|(0 << 8)|(0))
 /* how often the client should check in */
 #define HEARTBEAT 1
 /* how long until we drop a client */
@@ -26,7 +24,7 @@
 /* this should be set to the MTU */
 #define BUFFERSIZE 1400
 /* our current version */
-#define VERSION 0
+#define VERSION 1
 /* framerate */
 #define FRAMERATE (1.0/24.0)
 
@@ -119,6 +117,8 @@ typedef struct subnetword_t {
 struct subnetpacket {
 	unsigned short count;
 	unsigned short requestnum;
+	unsigned int base;
+	unsigned int mask;
 	subnetword subnets[MAXINDEX];
 };
 

@@ -1018,7 +1018,7 @@ void updatesubnets(struct subnetpacket* sp)
 	printf("Recived information about %i subnets\n", numsubnets); 
 	for (i = 0; i < numsubnets; i++)
 	{
-		subnets[i].base = sp->subnets[i].base + NETBASE;
+		subnets[i].base = sp->subnets[i].base + sp->base;
 		subnets[i].mask = sp->subnets[i].mask;
 	}
 	/* redraw the subnet stuff */

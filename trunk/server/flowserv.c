@@ -330,6 +330,8 @@ int main(int argc, char* argv[])
 		subnets->subnets[i].mask = subarray[i].mask;
 	}
 	subnets->count = numsubnets;
+	subnets->base = localip;
+	subnets->mask = localmask;
 	printf("Recieved information about %i subnets\n", numsubnets);
 /*
 	firewallrules = getfwrules("singsing.usu.edu", "/admin/firewall/currentrules.php?f=1", fwruleauthorization, &numfwrules);
