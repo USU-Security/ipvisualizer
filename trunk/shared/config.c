@@ -128,7 +128,9 @@ inline const char* iptolong(const char *b, unsigned int *ip)
 		*ip =  (atoi(a[0]) << 24) + (atoi(a[1]) << 16) + (atoi(a[2]) << 8) + atoi(a[3]);
 	else
 		*ip = 0;
-	return b+1;
+	while (*b && isdigit(*b))
+		b++;
+	return b;
 
 }
 int masktocidr(unsigned int m)
@@ -195,7 +197,7 @@ int main()
 		"--server",
 		"ipvisualizer",
 		"-l",
-		"192.168.0.0/16",
+		"192.168.10.128/25",
 		"--subnetpath",
 		"http://path/to/subnets.py",
 		"--a",
@@ -208,12 +210,12 @@ int main()
 		printf("Arg count is wrong\n");
 	if (strcmp(config_string(CONFIG_SERVER), "ipvisualizer"))
 		printf("server != ipvisualizer\n");
-	if (strcmp(config_string(CONFIG_LOCALNET), "192.168.0.0/16"))
-		printf("localnet != '192.168.0.0/16'\n");
+	if (strcmp(config_string(CONFIG_LOCALNET), "192.168.10.128/25"))
+		printf("localnet != '192.168.10.128/25'\n");
 	unsigned int ip=0, mask=0;
 	config_net(CONFIG_LOCALNET, &ip, &mask);
-	if (ip != 0xc0a80000 || mask != 0xffff0000)
-		printf("0x%08x 0x%08x != 0xc0a80000 0xffff0000\n", ip, mask);
+	if (ip != 0xc0a80a80 || mask != 0xffffff80)
+		printf("0x%08x 0x%08x != 0xc0a80880 0xffffff80\n", ip, mask);
 	if (strcmp(config_string(CONFIG_SUBNET), "http://path/to/subnets.py"))
 		printf("subnetpath != \"http://path/to/subnets.py\"\n");
 	config_net(CONFIG_AUTH, &ip, &mask);
