@@ -10,9 +10,6 @@
 #define FLOWDATA_H
 
 
-/* the mask to watch */
-#define NETMASK 0XFFFF0000
-/* the base ip */
 #define NETBASE ((129<<24)|(123<<16)|(0 << 8)|(0))
 /* how often the client should check in */
 #define HEARTBEAT 1

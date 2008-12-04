@@ -108,12 +108,12 @@ inline void flushbuffer() {
  * 				the packet type
  */
 void report(unsigned int src, unsigned int dst, unsigned short size, enum packettype pt) {
-	if ((src & NETMASK) == localip)
+	if ((src & localmask) == localip)
 	{
 		buffer->data[buffer->count].incoming = 0;
 		buffer->data[buffer->count].ip = src & ~localmask;
 	}
-	else if ((dst & NETMASK) == NETBASE)
+	else if ((dst & localmask) == localip)
 	{
 		buffer->data[buffer->count].incoming = 1;
 		buffer->data[buffer->count].ip = dst & ~localmask;
