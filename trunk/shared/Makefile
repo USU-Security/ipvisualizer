@@ -4,7 +4,7 @@ flowdata.o: flowdata.c flowdata.h
 config: config.c config.h
 
 clean:
-	rm -f flowdata.o
+	rm -f *.o
 
 distclean: clean
 
