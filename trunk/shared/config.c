@@ -57,7 +57,6 @@ int config_loadfile(const char* file)
 {
 	char k[512];
 	char v[512];
-	config_opts;
 	char * pv;
 	FILE* f = fopen(file, "r");
 	clearerr(f);

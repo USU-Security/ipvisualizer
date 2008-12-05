@@ -30,6 +30,7 @@
 #include "subnets.h"
 #include <string.h>
 #include <unistd.h>
+#include <stdlib.h>
 #include "sockutils.h"
 #include "base64.h"
 #include <curl/curl.h>

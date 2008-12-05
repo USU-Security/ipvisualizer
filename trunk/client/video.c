@@ -177,13 +177,13 @@ int startvideo(const char* moviefile, int imgwidth, int imgheight)
  * purpose:		to write a frame to a file
  * recieves:	a reference to the imgdata
  */
-void writeframe(uint8_t imgdata[][COLORDEPTH], int imgwidth, int imgheight) 
+void writeframe(uint8_t * imgdata, int imgwidth, int imgheight) 
 {
-	int i,j,k;
 	vid.video_pts = (double)vid.video_st->pts.val * vid.video_st->time_base.num / vid.video_st->time_base.den;
 	
 	/* *sigh* another slow copy. if i need to convert to yuv, here is the place */
 	/* silly me. this only needs to be done for planar (YUV) formats, rgb is ok
+	int i;
 	for (i = 0; i < imgwidth * imgheight; i++) 
 	{
 		vid.picture->data[0][i] = imgdata[i][0];
@@ -192,7 +192,7 @@ void writeframe(uint8_t imgdata[][COLORDEPTH], int imgwidth, int imgheight)
 	}
 	*/
 	/* since it reads it backwards, set it to the last data element */
-	vid.picture->data[0] = imgdata[(imgheight-1)*imgwidth];
+	vid.picture->data[0] = &imgdata[(imgheight-1)*imgwidth];
 	int outsize = avcodec_encode_video(vid.c, vid.outbuf, vid.outbuf_size, vid.picture);
 
 	if (outsize > 0) /* codec might buffer image for later processing */
@@ -220,8 +220,8 @@ void writeframe(uint8_t imgdata[][COLORDEPTH], int imgwidth, int imgheight)
 void endvideo()
 {
 	/* grab whats left */
-	int outsize, i;
-	while (outsize = avcodec_encode_video(vid.c, vid.outbuf, vid.outbuf_size, NULL))
+	unsigned int outsize, i;
+	while ((outsize = avcodec_encode_video(vid.c, vid.outbuf, vid.outbuf_size, NULL)))
 	{
 		AVPacket pkt;
 		av_init_packet(&pkt);

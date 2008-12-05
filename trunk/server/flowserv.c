@@ -38,7 +38,6 @@
 #include <errno.h>
 #include <time.h>
 #include <unistd.h>
-#include "../subnetpassword.h"
 #include "../shared/flowdata.h"
 #include "../shared/config.h"
 #include "subnets.h"
@@ -346,8 +345,9 @@ int main(int argc, char* argv[])
 	subnets = (struct subnetpacket*)cachedsubnets.data;
 	cachedsubnets.version = VERSION;
 	cachedsubnets.packettype = PKT_SUBNET;
-	
-	unsigned int numsubnets = getsubnets(subarray, MAXINDEX, config_string(CONFIG_SUBNET), config_string(CONFIG_AUTH));
+	unsigned int numsubnets = 0;
+	if (config_string(CONFIG_SUBNET))
+		numsubnets = getsubnets(subarray, MAXINDEX, config_string(CONFIG_SUBNET), config_string(CONFIG_AUTH));
 	if (numsubnets > MAXINDEX) 
 		numsubnets = MAXINDEX;
 	j = 0;

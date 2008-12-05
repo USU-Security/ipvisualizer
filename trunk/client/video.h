@@ -22,5 +22,5 @@
 
 void videoinit();
 int startvideo(const char*, int , int );
-void writeframe(uint8_t imgdata[][COLORDEPTH], int , int );
+void writeframe(uint8_t *imgdata, int , int );
 void endvideo();

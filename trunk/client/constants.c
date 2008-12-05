@@ -35,21 +35,6 @@ unsigned int localip;
 unsigned int localmask;
 unsigned short serverport;
 
-void initunconstants()
-{
-	//these depend on the size of the allocation
-	config_net(CONFIG_LOCALNET, &localip, &localmask);
-	int cidr = masktocidr(localmask);
-	int half = (32 - cidr)/2;
-	MAPHEIGHT = 1 << half;
-	if (cidr % 2)
-		MAPWIDTH = MAPHEIGHT << 1;
-	else
-		MAPWIDTH = MAPHEIGHT;
-	serverport = config_int(CONFIG_PORT);
-	//these depend on the size of the screen
-	screensize(1024, 1024);
-}
 
 /* initializes the unconstants according the size of the screen */
 void screensize(int w, int h)
@@ -77,5 +62,21 @@ void screensize(int w, int h)
 	printf("b_mask_rev: 0x%04x\n", b_mask_rev);
 */
 
+}
+
+void initunconstants()
+{
+	//these depend on the size of the allocation
+	config_net(CONFIG_LOCALNET, &localip, &localmask);
+	int cidr = masktocidr(localmask);
+	int half = (32 - cidr)/2;
+	MAPHEIGHT = 1 << half;
+	if (cidr % 2)
+		MAPWIDTH = MAPHEIGHT << 1;
+	else
+		MAPWIDTH = MAPHEIGHT;
+	serverport = config_int(CONFIG_PORT);
+	//these depend on the size of the screen
+	screensize(1024, 1024);
 }
 	

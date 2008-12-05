@@ -109,6 +109,7 @@ inline unsigned short mappixel(unsigned short ip);
 void sdl_eventloop();
 void printdisplay(const char* s, unsigned short ip);
 void allocatescreen();
+void pulldata(char start);
 
 /**
  * Where execution begins. Duh.
@@ -171,7 +172,7 @@ int main(int argc, char** argv)
 	glTexParameterf(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_NEAREST);
 
 	/* request the initial data */
-	pulldata(0);
+	pulldata(1);
 
 	/* start up our thread that listens for data */
 	int e;
@@ -262,7 +263,7 @@ void displaymsg(const char* s)
 void pulldata(char start)
 {
 	struct packetheader ph;
-	struct flowrequest* fr = (struct flowrequeset*)ph.data;
+	struct flowrequest* fr = (struct flowrequest*)ph.data;
 	
 	fr->flowon = start;
 	struct sockaddr_in sin;
@@ -406,7 +407,7 @@ void keyup(unsigned char k, int x, int y)
 		displayrules = !displayrules;
 		break;
 	default:
-		printf("Not handling key 0x%2X '%s'\n", (int)k, SDL_GetKeyName(k));
+		printf("Not handling key 0x%2X '%s' (%d, %d)\n", (int)k, SDL_GetKeyName(k), x, y);
 	}		
 	mappixel(0); 
 	update_menubar();
@@ -458,7 +459,7 @@ void mousemove(int x, int y)
 	x *= scalex;
 	y *= scaley;
 	y += .5;
-	if (y < MAPHEIGHT/2)
+	if (y < (int)MAPHEIGHT/2)
 		displayy = 0;
 	else
 		displayy =  IMGHEIGHT - 13*((float)IMGHEIGHT/height);
@@ -553,7 +554,9 @@ inline void lineup(int i, int j, unsigned char b, unsigned char g, unsigned char
  */
 void outlinesubnets()
 {
-	int i, j;
+	unsigned int i, j;
+	if (numsubnets < 2) //if we only have one, or no subnets, not worth doing.
+		return;
 	iptype t;
 	for (i = 1; i < MAPWIDTH; i++)
 	{
@@ -620,7 +623,7 @@ void outlinesubnets()
  */
 void initbuffer()
 {
-	int i;
+	unsigned int i;
 	for (i = 0; i < IMGWIDTH*IMGHEIGHT; i++){
 		imgdata[i*COLORDEPTH + 0] = 0;
 		imgdata[i*COLORDEPTH + 1] = 0;
@@ -653,16 +656,13 @@ double timer()
  */
 void fade()
 {
-	int i, j;
+	unsigned int i;
 	/* lock */
 	pthread_mutex_lock(&imglock);
 	for (i = 0; i < MAPWIDTH*MAPHEIGHT; i++)
-	{
 		datapointfade(&pointdata[i], FADERATE);
-	}
 	pthread_mutex_unlock(&imglock);
 	/* unlock */
-
 }
 
 
@@ -703,7 +703,7 @@ int idle()
 	return 0;
 }
 
-inline void renderstring(const char* s, float color)
+inline void renderstring(const char* s)
 {
 /*	while (*s)
 		glutBitmapCharacter(GLUT_BITMAP_8_BY_13, *(s++)); */
@@ -787,7 +787,7 @@ void drawdisplaytext()
 	int i;
 	glColor3f(1,1,1);
 	glRasterPos2i(displayx, displayy);
-	renderstring(displaystring, 1);
+	renderstring(displaystring);
 	if (displayrules)
 	{
 		for (i = 0; i < DISPLAYLINES; i++) 
@@ -816,7 +816,7 @@ void drawdisplaytext()
 				else
 					glRasterPos2i(0, (IMGHEIGHT - 30) - (i+1 ) * 15 + displaytext.scroll);
 				//glRasterPos2i(0, IMGHEIGHT - 13 - i*13);
-				renderstring(displaytext.log[(i+displaytext.which)%DISPLAYLINES], 1);
+				renderstring(displaytext.log[(i+displaytext.which)%DISPLAYLINES]);
 			}
 		}
 	}
@@ -839,7 +839,7 @@ void display()
 	/* insert lock here */
 	pthread_mutex_lock(&imglock);
 	/* set up the buffer */
-	int i, j;
+	unsigned int i, j;
 	for (i = 0; i < MAPWIDTH; i++)
 		for (j = 0; j < MAPHEIGHT; j++)
 			datapointdrawpixel(&pointdata[i + j*MAPWIDTH], imgdata, i, j, IMGWIDTH);
@@ -863,17 +863,11 @@ void display()
 	glDisable(GL_TEXTURE_2D);
 
 	int glerr;
-	if (glerr = glGetError()) {
+	if ((glerr = glGetError())) {
 		printf("errors drawing to the screen: %i\n", glerr);
-		return 1;
 	}
-	/* insert unlock here */
 	/* draw the logged stuff */
-	//glColor3f(1,1,0);
 	drawdisplaytext();
-	//glRasterPos2i(displayx, displayy);	
-	//glColor3f(1,1,1);
-	//renderstring(displaystring, 1);
 	SDL_GL_SwapBuffers();
 	sched_yield();
 }
@@ -885,8 +879,8 @@ void display()
  */
 void update_image(struct flowpacket* fp) 
 {
-	int i;
-	int max = fp->count;
+	unsigned int i;
+	unsigned int max = fp->count;
 	if (max > MAXINDEX)
 		max = MAXINDEX; /* watch those externally induced overflows */
 	/* fp->base may not be the same as localip. if not, we need to offset it to match. */
@@ -945,8 +939,8 @@ void update_image(struct flowpacket* fp)
  */
 void update_firewall(struct fwflowpacket* fp) 
 {
-	int i;
-	int max = fp->count;
+	unsigned int i;
+	unsigned int max = fp->count;
 	if (max > MAXINDEX)
 		max = MAXINDEX; /* watch those externally induced overflows */
 	/* lock it up */
@@ -960,7 +954,7 @@ void update_firewall(struct fwflowpacket* fp)
 		datapointdrop(&pointdata[pixel], 192);
 		if (pointdata[pixel].msg)
 		{
-			free(pointdata[pixel].msg);
+			free((void*)pointdata[pixel].msg);
 			pointdata[pixel].msg = 0;
 		}
 		if (rules[fp->data[i].rule])
@@ -980,8 +974,8 @@ void update_firewall(struct fwflowpacket* fp)
  */
 void update_firewall_verbose(struct verbosefirewall* fp) 
 {
-	int i;
-	int max = fp->count;
+	unsigned int i;
+	unsigned int max = fp->count;
 	if (max > MAXINDEX)
 		max = MAXINDEX; /* watch those externally induced overflows */
 	/* lock it up */
@@ -1001,15 +995,15 @@ void update_firewall_verbose(struct verbosefirewall* fp)
 		convert.i = fp->data[i].remote;
 		const char * p = "";
 		if (fp->data[i].packet == UDP)
-			p = "UDP";
+			p = "  UDP";
 		else if (fp->data[i].packet == TCP)
-			p = "TCP";
+			p = "  TCP";
 		if (fp->data[i].packet == OTHER)
 			snprintf(buffer, 512, "OTHER %hhu.%hhu.%hhu.%hhu %s",
 				convert.b[3], convert.b[2], convert.b[1], convert.b[0],
 				fp->data[i].incoming? "-->" : "<--");
 		else
-			snprintf(buffer, 512, "% 5s %hhu.%hhu.%hhu.%hhu:%hu %s %hu:",
+			snprintf(buffer, 512, "%s %hhu.%hhu.%hhu.%hhu:%hu %s %hu:",
 				p,
 				convert.b[3], convert.b[2], convert.b[1], convert.b[0],
 				fp->data[i].remoteport,
@@ -1017,7 +1011,7 @@ void update_firewall_verbose(struct verbosefirewall* fp)
 				fp->data[i].localport);
 		printdisplay(buffer, fp->data[i].local);
 		if (pointdata[pixel].msg)
-			free(pointdata[pixel].msg);
+			free((void*)pointdata[pixel].msg);
 		pointdata[pixel].msg = strdup(buffer);
 	}
 	pthread_mutex_unlock(&imglock);
@@ -1052,7 +1046,7 @@ void update_rule(void *buffer)
 	struct fwrulepacket rp;
 	readrulepacket(buffer, &rp);
 	if (rules[rp.num])
-		free(rules[rp.num]);
+		free((void*)rules[rp.num]);
 	rules[rp.num] = rp.string;
 	printf("Recieved rule %hu of %hu: %s\n", rp.num + 1, rp.max, rp.string);
 }
@@ -1063,9 +1057,9 @@ void update_rule(void *buffer)
  */
 void* collect_data(void* p)
 {
+	p = 0; /* avoid compiler warnings, since we don't use this */
 	dead = 0;
 	/* start listening for data */
-	int s;
 	struct sockaddr_in addr;
 
 	memset(&addr, 0, sizeof(addr));
@@ -1074,18 +1068,13 @@ void* collect_data(void* p)
 	addr.sin_port = htons(serverport);
 	addr.sin_addr.s_addr = serverip;
 
+	/* kill the thread if the socket couldnt be allocated */
 	if (!sock)
 	{
 		dead = 1;
 		return 0;
 	}
-	/*
-	if (bind(s, (struct sockaddr*)&addr, sizeof(addr)))
-	{
-		dead = 1;
-		return 0;
-	}
-	*/
+	
 	socklen_t addrlen = sizeof(addr);
 	struct packetheader ph;
 	while (!die)
