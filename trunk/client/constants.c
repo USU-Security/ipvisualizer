@@ -63,11 +63,10 @@ void screensize(int w, int h)
 */
 
 }
-
-void initunconstants()
+void setnet(unsigned int base, unsigned int mask)
 {
-	//these depend on the size of the allocation
-	config_net(CONFIG_LOCALNET, &localip, &localmask);
+	localmask = mask;
+	localip = base;
 	int cidr = masktocidr(localmask);
 	int half = (32 - cidr)/2;
 	MAPHEIGHT = 1 << half;
@@ -78,5 +77,13 @@ void initunconstants()
 	serverport = config_int(CONFIG_PORT);
 	//these depend on the size of the screen
 	screensize(1024, 1024);
+
+}
+void initunconstants()
+{
+	unsigned int i, m;
+	//these depend on the size of the allocation
+	config_net(CONFIG_LOCALNET, &i, &m);
+	setnet(i, m);
 }
 	

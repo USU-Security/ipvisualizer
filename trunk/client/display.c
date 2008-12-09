@@ -43,6 +43,7 @@
 #include "text.h"
 #include "constants.h"
 #include <sched.h>
+#include <errno.h>
 //#define FULLSCREEN 1
 
 
@@ -92,6 +93,18 @@ struct t_displaytext
 	int which;
 } displaytext;
 GLuint texture;
+int highlighting = 0;
+struct {
+	int x1,x2, y1, y2;
+} subnetarea, highlightarea = {0,0,0,0};
+unsigned short selectedbase, selectedmask;
+pthread_t pid;
+struct ipaddress {
+	union {
+		unsigned int i;
+		unsigned char a[4];
+	} ip;
+} mouseip;
 
 /* prototypes */
 int  idle();
@@ -140,11 +153,6 @@ int main(int argc, char** argv)
 	}
 	displaytext.which = DISPLAYLINES-1;
 
-	glEnable(GL_BLEND);
-	glBlendFunc(GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA);
-	glEnable(GL_TEXTURE_2D);
-	gettimeofday(&inittime, 0);
-	initbuffer();
 	SDL_Init(SDL_INIT_VIDEO);
 	atexit(SDL_Quit);
 	
@@ -153,6 +161,12 @@ int main(int argc, char** argv)
 	
 	screen = SDL_SetVideoMode(1024, 1024, 32, SDL_RESIZABLE|SDL_OPENGL);
 	SDL_WM_SetCaption(config_string(CONFIG_LOCALNET), "ipvisualizer");
+	
+	glEnable(GL_BLEND);
+	glBlendFunc(GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA);
+	glEnable(GL_TEXTURE_2D);
+	gettimeofday(&inittime, 0);
+	initbuffer();
 	
 	//screen = SDL_SetVideoMode(512, 512, 32, SDL_RESIZABLE|SDL_OPENGL);
 	//screen = SDL_SetVideoMode(modes[0]->w, modes[0]->h, 32,       SDL_FULLSCREEN|SDL_DOUBLEBUF|SDL_HWSURFACE|SDL_OPENGL);
@@ -176,7 +190,6 @@ int main(int argc, char** argv)
 
 	/* start up our thread that listens for data */
 	int e;
-	pthread_t pid;
 	if ((e = pthread_create(&pid, NULL, collect_data, NULL)))
 		printf("Error while creating thread: %s", strerror(e));
 	else 
@@ -184,6 +197,14 @@ int main(int argc, char** argv)
 
 	SDL_Quit();
 	return 0;
+}
+
+void findcommonsubnet(unsigned short ip1, unsigned short ip2, unsigned short* base, unsigned short* mask)
+{
+	*mask = 0xff00;
+	while (*mask && ((*mask & ip1) != (*mask & ip2)))
+		*mask <<= 1;
+	*base = ip1 & *mask;
 }
 
 /* dynamically allocates structures that keep track of screen pixels */
@@ -200,6 +221,191 @@ void allocatescreen()
 	if (pointdata)
 		free(pointdata);
 	pointdata = (struct datapoint*)malloc(MAPWIDTH*MAPHEIGHT*sizeof(struct datapoint));
+}
+void stop_thread()
+{
+	die = 1;
+	while(!dead)
+		sched_yield();
+	void* ret;
+	pthread_join(pid, &ret);
+}
+void restart_thread()
+{
+	dead = 0;
+	die = 0;
+	if (pthread_create(&pid, NULL, collect_data, NULL))
+		exit(0);
+}
+
+void mousedown(SDL_MouseButtonEvent* e)
+{
+	if (e->button == SDL_BUTTON_LEFT || e->button == SDL_BUTTON_RIGHT) 
+	{
+		highlightarea.x2 = highlightarea.x1 = e->x /(float)width *IMGWIDTH;
+		highlightarea.y2 = highlightarea.y1 = IMGHEIGHT - e->y / (float)height * IMGHEIGHT;
+		highlighting = e->button;
+	}
+	else if (e->button == SDL_BUTTON_WHEELUP)
+	{
+		//zoom in... need to figure out whether to add a 1 or a zero based
+		//on the position
+		if (MAPWIDTH == MAPHEIGHT)
+		{
+			if (e->y < height/2)
+			{
+				unsigned int newmask = 0x80000000 | (localmask >> 1);
+				unsigned int newbit = newmask & (~localmask);
+				localip |= newbit;
+				localmask = newmask;
+			}
+			else
+			{
+				localmask = 0x80000000 | (localmask >> 1);
+			}
+		}
+		else
+		{
+			if (e->x > width/2)
+			{
+				unsigned int newmask = 0x80000000 | (localmask >> 1);
+				unsigned int newbit = newmask & (~localmask);
+				localip |= newbit;
+				localmask = newmask;
+			}
+			else
+			{
+				localmask = 0x80000000 | (localmask >> 1);
+			}
+		}
+
+		if (localmask != 0xffffff00)
+        {
+			stop_thread(); /* prevent race condition */
+			setnet(localip|selectedbase, localmask | selectedmask);
+			screensize(1024, 1024);
+			allocatescreen();
+			initbuffer();
+			reshape(width, height);
+			restart_thread();
+		}
+	}
+	else if (e->button == SDL_BUTTON_WHEELDOWN)
+	{
+		/* only zoom out if we have bits left to discard */
+		if ((localmask & 0xffff) != 0)
+		{
+			stop_thread();
+			unsigned int newbase = localip & (localmask << 1);
+			setnet(newbase, localmask << 1);
+			screensize(1024, 1024);
+			allocatescreen();
+			initbuffer();
+			reshape(width, height);
+			restart_thread();
+		}
+	}
+}
+void mouseup(SDL_MouseButtonEvent* e)
+{
+	if (e->button == SDL_BUTTON_LEFT && highlighting == SDL_BUTTON_LEFT)
+	{
+		highlighting = 0;
+		if (highlightarea.x1 != highlightarea.x2 && highlightarea.y1 != highlightarea.y2)
+		{
+			/* only zoom in if we aren't smaller than a /24 */
+			if (localmask != 0xffffff00)
+			{
+				stop_thread(); /* prevent race condition */
+				setnet(localip|selectedbase, localmask | selectedmask);
+				screensize(1024, 1024);
+				allocatescreen();
+				initbuffer();
+				reshape(width, height);
+				restart_thread();
+			}
+		}
+		else
+		{
+			/* a normal left click */
+			if (config_string(CONFIG_LEFTCLICK))
+			{
+				printf("Beginning fork\n");
+				if (fork() == 0)
+				{
+					printf("\tI am the child fork\n");
+					char displaystring[32];
+					snprintf(displaystring, 32, "%i.%i.%i.%i", (int)mouseip.ip.a[3], (int)mouseip.ip.a[2], (int)mouseip.ip.a[1], (int)mouseip.ip.a[0]);
+					
+
+					int l = strlen(config_string(CONFIG_LEFTCLICK)) + 33;
+					char s[l];
+
+					snprintf(s, l, config_string(CONFIG_LEFTCLICK), displaystring);
+					//execlp("sh", "-c", s);
+					if (-1 == system(s))
+						printf("Unable to spawn child: %s", strerror(errno));
+					_exit(0); /* exec failed, need to quit */
+				}
+				printf("\tI am the parent fork\n");
+			}
+			else
+			{
+				printf("An ip has been clicked using the left mouse button.\nIf leftclickcmd was specified in the config, it would be executed now.\n");
+			}
+		}
+	}
+	else if (e->button == SDL_BUTTON_RIGHT && highlighting == SDL_BUTTON_RIGHT)
+	{
+		highlighting = 0;
+		unsigned int cidr = masktocidr(localmask | selectedmask);
+		if ((highlightarea.x1 != highlightarea.x2 || highlightarea.y1 != highlightarea.y2) && cidr < 32)
+		{
+			if (config_string(CONFIG_RIGHTNET))
+			{
+				if (fork() == 0)
+				{
+					char displaystring[32];
+					struct ipaddress c;
+					c.ip.i = mouseip.ip.i & (localmask | selectedmask);
+
+
+					snprintf(displaystring, 32, "%i.%i.%i.%i/%i", (int)c.ip.a[3], (int)c.ip.a[2], (int)c.ip.a[1], (int)c.ip.a[0], cidr);
+					int l = strlen(config_string(CONFIG_RIGHTNET)) + 33;
+					char s[l];
+					snprintf(s, l, config_string(CONFIG_RIGHTNET), displaystring);
+					if (-1 == system(s))
+						printf("Unable to spawn child: %s", strerror(errno));
+					_exit(0); /* exec failed, need to quit */
+				}
+			}
+			else
+			{
+				printf("A network has been selected using the right mouse button.\nIf rightclicknet was specified in the config, it would be executed now.\n");
+			}
+		}
+		else
+		{
+			if (config_string(CONFIG_RIGHTCLICK))
+			{
+				if (fork() == 0)
+				{
+					char displaystring[32];
+					snprintf(displaystring, 32, "%i.%i.%i.%i", (int)mouseip.ip.a[3], (int)mouseip.ip.a[2], (int)mouseip.ip.a[1], (int)mouseip.ip.a[0]);
+					int l = strlen(config_string(CONFIG_RIGHTCLICK)) + 33;
+					char s[l];
+					snprintf(s, l, config_string(CONFIG_RIGHTCLICK), displaystring);
+					if (-1 == system(s))
+						printf("Unable to spawn child: %s", strerror(errno));
+					_exit(0); /* exec failed, need to quit */
+				}
+			}
+			else
+			{
+				printf("An ip has been clicked using the right mouse button.\nIf rightclickcmd was specified in the config, it would be executed now.\n");
+			}				
+		}	
+	}
 }
 
 /*
@@ -228,6 +434,12 @@ void sdl_eventloop()
 				break;
 			case SDL_MOUSEMOTION:
 				mousemove(event.motion.x, event.motion.y);
+				break;
+			case SDL_MOUSEBUTTONDOWN:
+				mousedown(&event.button);
+				break;
+			case SDL_MOUSEBUTTONUP:
+				mouseup(&event.button);
 				break;
 			default:
 				break;
@@ -450,11 +662,31 @@ inline unsigned short unmappixel(unsigned short ip)
 
 /*
  * function:	mousemove()
- * purpose:	callback that gets called when the mouse moves
+ * purpose:		callback that gets called when the mouse moves
  * recieves:	the x and y coordinate of the mouse. woot. woot
  */
 void mousemove(int x, int y)
 {
+	highlightarea.x2 = x /(float)width *IMGWIDTH;
+	highlightarea.y2 = IMGHEIGHT - y / (float)height * IMGHEIGHT;
+	/* find out what ips they have highlighted */
+	unsigned short ip1 = ((unsigned int)(highlightarea.x1/BLOCKWIDTH) + ((unsigned int)(highlightarea.y1/BLOCKHEIGHT) * MAPWIDTH));
+	unsigned short ip2 = ((unsigned int)(highlightarea.x2/BLOCKWIDTH) + ((unsigned int)(highlightarea.y2/BLOCKHEIGHT) * MAPWIDTH));
+	/* find a subnet that encapsulates them */
+	ip1 = unmappixel(ip1);
+	ip2 = unmappixel(ip2);
+	findcommonsubnet(ip1, ip2, &selectedbase, &selectedmask);
+	ip1 = selectedbase;
+	ip2 = selectedbase | ~selectedmask;
+	/* then convert back to screen coordinates */
+	ip1 = mappixel(ip1);
+	ip2 = mappixel(ip2);
+	subnetarea.x1 = ip1 % MAPWIDTH * BLOCKWIDTH;
+	subnetarea.y1 = ip1 / MAPHEIGHT * BLOCKWIDTH;
+	subnetarea.x2 = ip2 % MAPWIDTH * BLOCKWIDTH;
+	subnetarea.y2 = ip2 / MAPHEIGHT * BLOCKWIDTH;
+
+
 	/* unmap the ip */
 	x *= scalex;
 	y *= scaley;
@@ -468,20 +700,14 @@ void mousemove(int x, int y)
 	unsigned int ip = unmappixel(mappixel);
 	if ((ip & ~localmask) != ip)
 		return;
-	struct {
-		union{
-			unsigned int i;
-			unsigned char a[4];
-		} ip;
-	} c;
-	c.ip.i = ip | localip;
+	mouseip.ip.i = ip | localip;
 	
 	if (pointdata[mappixel].msg)
 		snprintf(displaystring, DISPLAYSTRINGSIZE, 
-			"%i.%i.%i.%i %s", c.ip.a[3], c.ip.a[2], c.ip.a[1], c.ip.a[0], pointdata[mappixel].msg );
+			"%i.%i.%i.%i %s", mouseip.ip.a[3], mouseip.ip.a[2], mouseip.ip.a[1], mouseip.ip.a[0], pointdata[mappixel].msg );
 	else 
 		snprintf(displaystring, DISPLAYSTRINGSIZE, 
-			"%i.%i.%i.%i", c.ip.a[3], c.ip.a[2], c.ip.a[1], c.ip.a[0]);
+			"%i.%i.%i.%i", mouseip.ip.a[3], mouseip.ip.a[2], mouseip.ip.a[1], mouseip.ip.a[0]);
 
 }
 
@@ -632,7 +858,7 @@ void initbuffer()
 		imgdata[i*COLORDEPTH + 3] = 255;
 #endif
 	}
-	memset(pointdata, 0, sizeof(pointdata) * MAPWIDTH * MAPHEIGHT);
+	memset(pointdata, 0, sizeof(struct datapoint) * MAPWIDTH * MAPHEIGHT);
 	outlinesubnets();
 }
 
@@ -861,6 +1087,16 @@ void display()
 	  glTexCoord2d(0, 1); glVertex2d(0, IMGHEIGHT);
 	 glEnd();
 	glDisable(GL_TEXTURE_2D);
+	if (highlighting && highlightarea.x1 != highlightarea.x2 && highlightarea.y1 != highlightarea.y2)
+	{
+		glBegin(GL_QUADS);
+			glColor4f(0,0,1,.3);
+			glVertex2d(subnetarea.x1, subnetarea.y1);
+			glVertex2d(subnetarea.x2+BLOCKWIDTH, subnetarea.y1);
+			glVertex2d(subnetarea.x2+BLOCKWIDTH, subnetarea.y2+BLOCKHEIGHT);
+			glVertex2d(subnetarea.x1, subnetarea.y2+BLOCKHEIGHT);
+		glEnd();
+	}
 
 	int glerr;
 	if ((glerr = glGetError())) {
@@ -933,6 +1169,22 @@ void update_image(struct flowpacket* fp)
 }
 
 /*
+int verifynulls(int which)
+{
+	int i;
+	for (i = 0; i < MAPWIDTH * MAPHEIGHT; i++)
+	{
+		if (pointdata[i].msg)
+		{
+			printf("%010d: pointdata[%d].msg is not null\n", which, i);
+			return 0;
+		}
+	}
+	return 1;
+}
+// */
+
+/*
  * function:	update_firewall()
  * purpose:		to update the image according to a given flowpacket
  * recieves:	the flow packet
@@ -958,7 +1210,7 @@ void update_firewall(struct fwflowpacket* fp)
 			pointdata[pixel].msg = 0;
 		}
 		if (rules[fp->data[i].rule])
-			pointdata[pixel].msg = strdup(rules[fp->data[i].rule]);
+			pointdata[pixel].msg = 0; //strdup(rules[fp->data[i].rule]);
 		if (rules[fp->data[i].rule]) 
 			printdisplay(rules[fp->data[i].rule], fp->data[i].ip);
 	}

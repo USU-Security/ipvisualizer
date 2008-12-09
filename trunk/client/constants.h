@@ -42,3 +42,4 @@ extern unsigned int b_mask_rev;
 
 /* call this function to initialize these variables */
 void initunconstants();
+void setnet(unsigned int base, unsigned int mask);

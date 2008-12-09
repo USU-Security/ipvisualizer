@@ -52,6 +52,19 @@ dist: distclean
 	echo "" >> .tmp/ipvisualizer/ipvisualizer.conf
 	echo "#which interface to sniff on. defaults to eth0. Server only" >> .tmp/ipvisualizer/ipvisualizer.conf
 	echo "#interface = eth0" >> .tmp/ipvisualizer/ipvisualizer.conf
+	echo "" >> .tmp/ipvisualizer/ipvisualizer.conf
+	echo "" >> .tmp/ipvisualizer/ipvisualizer.conf
+	echo "#the following commands are executed when the user interacts with the program" >> .tmp/ipvisualizer/ipvisualizer.conf
+	echo "#a %s should be used to indicate where an argument should be stored" >> .tmp/ipvisualizer/ipvisualizer.conf
+	echo "#ex:" >> .tmp/ipvisualizer/ipvisualizer.conf
+	echo "#rightclickcmd = firefox http://www.networksolutions.com/whois/results.jsp?ip=%s" >> .tmp/ipvisualizer/ipvisualizer.conf
+	echo "#" >> .tmp/ipvisualizer/ipvisualizer.conf
+	echo "#This command executes with a left click on a single ip as its argument" >> .tmp/ipvisualizer/ipvisualizer.conf
+	echo "#leftclickcmd = echo User left clicked on ip %s" >> .tmp/ipvisualizer/ipvisualizer.conf
+	echo "#this command executes with a right click on a single ip as its argument" >> .tmp/ipvisualizer/ipvisualizer.conf
+	echo "#rightclickcmd = echo User right clicked on ip %s" >> .tmp/ipvisualizer/ipvisualizer.conf
+	echo "#This command executes when a network is selected with the right mouse button" >> .tmp/ipvisualizer/ipvisualizer.conf
+	echo "#rightclicknet = echo User selected the network %s with the right mouse button" >> .tmp/ipvisualizer/ipvisualizer.conf
 	find .tmp/ipvisualizer/ -iname ".*" | xargs rm -rf
 	tar -cvzf ipvisualizer.tar.gz  -C .tmp ipvisualizer
 	rm -rf .tmp
