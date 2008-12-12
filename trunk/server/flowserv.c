@@ -410,9 +410,17 @@ int main(int argc, char* argv[])
 		int result;
 		if(1 == (result = pcap_next_ex(handle, &header, &packet))) {
 			ethernet = (struct sniff_ethernet*)(packet);
-			/* verify that the packet is an ip packet */
-			if (ntohs(ethernet->ether_type) == T_IP) {
+			if (ntohs(ethernet->ether_type) == T_IP)
 				ip = (struct sniff_ip*)(packet + SIZE_ETHERNET);
+			else if (ntohs(ethernet->ether_type) == T_VLAN)
+			{
+				struct sniff_ethernet_8021q*vethernet = (struct sniff_ethernet_8021q*)packet;
+				if(ntohs(vethernet->ether_type) == T_IP)
+						ip = (struct sniff_ip*)(packet + SIZE_8021Q);
+			}
+			/* verify that the packet is an ip packet */
+			if (ip)
+			{
 				/* grab the protocol */
 				enum packettype pt;
 				if (ip->ip_p == T_TCP)
@@ -422,6 +430,7 @@ int main(int argc, char* argv[])
 				else
 					pt = OTHER;
 				report(ntohl(ip->ip_src), ntohl(ip->ip_dst), header->len, pt);
+				ip = 0;
 			} else {
 			}
 

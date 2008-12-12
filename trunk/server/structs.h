@@ -26,7 +26,17 @@ struct sniff_ethernet {
     u_short ether_type; /* IP? ARP? RARP? etc */
 };
 
+struct sniff_ethernet_8021q {
+    u_char ether_dhost[ETHER_ADDR_LEN]; /* Destination host address */
+    u_char ether_shost[ETHER_ADDR_LEN]; /* Source host address */
+    u_short vlan_tag; /* 0x8100 */
+    u_short vlan_id; /* needs masked to get last 12 bits */
+    u_short ether_type; /* IP? ARP? RARP? etc */
+};
+#define VLANID(i) ((i)&0x0fff)
+
 #define SIZE_ETHERNET 14
+#define SIZE_8021Q 18
 
 /* IP header */
 struct sniff_ip {
@@ -47,3 +57,4 @@ struct sniff_ip {
 #define IP_HL(ip)		(((ip)->ip_vhl) & 0x0f)
 #define IP_V(ip)		(((ip)->ip_vhl) >> 4)
 
+#define T_VLAN 0x8100
