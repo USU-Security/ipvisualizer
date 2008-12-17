@@ -335,7 +335,7 @@ void checklisten(int listen)
  */
 int main(int argc, char* argv[])
 {
-	config_loadfile("ipvisualizer.conf");
+	config_loadfile("/etc/ipvisualizer.conf");
 	config_loadargs(argc, argv);
 	/* these are loaded from the config, so must happen afterwards */
 	initglobals();

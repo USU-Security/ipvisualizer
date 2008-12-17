@@ -30,6 +30,11 @@
 #include <pthread.h>
 #include "../shared/flowdata.h"
 #include "../shared/config.h"
+#include "../config.h" /* the generated includes */
+#if HAVE_LIBAVCODEC && HAVE_LIBAVFORMAT
+const char moviefile[] = "output.avi";
+#include "video.h"
+#endif
 #include <sys/socket.h>
 #include <netinet/in.h>
 #include <stdio.h>
@@ -37,7 +42,6 @@
 #include <string.h>
 #include "pixelmapping.h"
 #include <netdb.h>
-#include "video.h"
 #include "subnets.h"
 #include <unistd.h>
 #include "text.h"
@@ -61,7 +65,6 @@ int SHOW_OUT = 1;
 int mapping = 2;
 int pausedisplay = 0;
 int displayrules = 1;
-const char moviefile[] = "output.avi";
 int sock = 0;
 
 struct timeval inittime;
@@ -129,15 +132,22 @@ void pulldata(char start);
  * */
 int main(int argc, char** argv)
 {
-	config_loadfile("ipvisualizer.conf");
+	config_loadfile("/etc/ipvisualizer.conf");
 	config_loadargs(argc, argv);
 	//get values for the variables that used to be constants from the config.
 	initunconstants();
 	allocatescreen();
+#if HAVE_LIBAVCODEC && HAVE_LIBAVFORMAT
 	videoinit();
+#endif
 	int i;
 	
 	struct hostent* he = gethostbyname(config_string(CONFIG_SERVER));
+	if (!he)
+	{
+		printf("Unable to lookup %s. Please check the config file\n", config_string(CONFIG_SERVER));
+		return 1;
+	}
 	memcpy(&serverip, he->h_addr_list[0], sizeof(serverip));
 
 	/* computing the forward mapping from the reverse mapping */
@@ -173,7 +183,7 @@ int main(int argc, char** argv)
 
 	if (!screen) 
 	{
-		printf("Unable to create the screen\n");
+		printf("Unable to create the screen: %s", SDL_GetError());
 		return 1;
 	}
 	
@@ -500,12 +510,14 @@ void pulldata(char start)
 
 void videoon(char b)
 {
+#if HAVE_LIBAVCODEC && HAVE_LIBAVFORMAT
 	if (b && !videostate) {
 		videostate = startvideo(moviefile, IMGWIDTH, IMGHEIGHT);
 	} else if (!b && videostate) {
 		endvideo();
 		videostate = 0;
 	}
+#endif
 }
 		
 
@@ -602,12 +614,14 @@ void keyup(unsigned char k, int x, int y)
 		videoon(0);
 		exit(0);
 		break;
+#if HAVE_LIBAVCODEC && HAVE_LIBAVFORMAT
 	case SDLK_v:
 		if (keys[SDLK_LSHIFT] || keys[SDLK_RSHIFT]) 
 			videoon(1);
 		else
 			videoon(0);
 		break;
+#endif
 	case SDLK_RETURN:
 		if (keys[SDLK_RALT] || keys[SDLK_LALT])
 			togglefullscreen();
@@ -1069,9 +1083,11 @@ void display()
 	for (i = 0; i < MAPWIDTH; i++)
 		for (j = 0; j < MAPHEIGHT; j++)
 			datapointdrawpixel(&pointdata[i + j*MAPWIDTH], imgdata, i, j, IMGWIDTH);
-			
+
+#if HAVE_LIBAVCODEC && HAVE_LIBAVFORMAT
 	if (videostate)
 		writeframe(imgdata, IMGWIDTH, IMGHEIGHT);
+#endif
 	glBindTexture(GL_TEXTURE_2D, texture);
 #if (COLORDEPTH==4)
 	glTexImage2D(GL_TEXTURE_2D, 0, 4, IMGWIDTH, IMGHEIGHT, 0, GL_BGRA, GL_UNSIGNED_BYTE, imgdata);

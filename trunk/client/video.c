@@ -22,6 +22,9 @@
  * created:	03-15-2007
  * creator:	rian shelley
  */
+#include "../config.h"
+#if HAVE_LIBAVCODEC && HAVE_LIBAVFORMAT
+
 #include <stdlib.h>
 #include <stdio.h>
 #include <ffmpeg/avcodec.h>
@@ -253,3 +256,5 @@ void endvideo()
 	av_free(vid.oc);
 	displaymsg("Done Writing avi file");
 }
+
+#endif /* HAVE_LIBAVCODEC && HAVE_LIBAVFORMAT */

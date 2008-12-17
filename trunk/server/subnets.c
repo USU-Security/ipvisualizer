@@ -32,7 +32,6 @@
 #include <unistd.h>
 #include <stdlib.h>
 #include "sockutils.h"
-#include "base64.h"
 #include <curl/curl.h>
 
 CURL* curlhandle=NULL;
