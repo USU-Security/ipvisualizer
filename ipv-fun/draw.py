@@ -6,6 +6,7 @@ from socket import *
 import time
 import sys
 import random
+import xkcd
 
 debug = 1
 
@@ -32,6 +33,13 @@ def rev_netblock( num ):
 	y_outer = (num / 4096 ).__int__() % 26
 	return y_outer * 4096 + x_outer * 256 + y_inner * 16 + x_inner
 
+def fwd_xkcd( num ):
+	return xkcd.forward[num]
+
+def rev_xkcd( num ):
+	return xkcd.reverse[num]
+
+
 def get_rgb_from_bmp( filename ):
 	x = BMPWrapper( filename )
 	i = 0
@@ -43,7 +51,7 @@ def get_rgb_from_bmp( filename ):
 			r = x.rgbdata[i] >> 16 & 0xFF
 			g = x.rgbdata[i] >>  8 & 0xFF
 			b = x.rgbdata[i]       & 0xFF
-			pixel = fwd_netblock(i)
+			pixel = fwd_map(i)
 			#address = i
 			# FIXME: separate r/g/b?
 			# FIXME: deal with intensity?
@@ -113,6 +121,8 @@ def draw_bmp( filename ):
 
 if __name__ == "__main__":
 	print sys.argv
+	global fwd_map
+	fwd_map = fwd_netblock
 	#time.sleep(10)
 	if len(sys.argv) > 1:
 		picture = sys.argv[1]
