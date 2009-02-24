@@ -154,6 +154,9 @@ int main(int argc, char** argv)
 	for (i = 0; i < 65536; i++)
 		forwardmap[reversemap[i]] = i;
 	
+	for (i = 0; i < 65536; i++)
+		forwardxkcdmap[reversexkcdmap[i]] = i;
+	
 	/* initialize the onscreen log */
 	for (i = 0; i < DISPLAYLINES; i++)
 	{
@@ -655,6 +658,8 @@ inline unsigned short mappixel(unsigned short ip)
 		return forwardmap[ip];
 	case 2:
 		return fwd_netblock(ip);
+	case 3: /* fractal mapping */
+		return forwardxkcdmap[ip];
 	}	
 	/* reset to linear */
 	mapping = 0;
@@ -669,6 +674,8 @@ inline unsigned short unmappixel(unsigned short ip)
 		return reversemap[ip];
 	case 2:
 		return rev_netblock(ip);
+	case 3:
+		return reversexkcdmap[ip];
 	}
 	mapping = 0;
 	return ip;
