@@ -26,6 +26,49 @@ dims = { 'x':256, 'y':256 }
 def get_ip( number ):
 	return "129.123.%d.%d" % ( int(number/dims['x']), number%dims['x'] )
 
+def to_addr( int ):
+	return "%d.%d.%d.%d" % ( int>>24 & 0xff, int>>16 & 0xff, int>>8 & 0xff, int & 0xff)
+
+seq = 1234
+spt = 1
+#s = socket(AF_INET,SOCK_RAW,IPPROTO_RAW)
+s = socket(AF_INET,SOCK_RAW,IPPROTO_RAW)
+f = open('packets.hex','w')
+port = 4321
+tcp_data="Random data for a TCP packet..."
+
+def ip_to_int( ip ):
+	(a,b,c,d) = map(int,ip.split('.'))
+	return a<<24|b<<16|c<<8|d
+
+def red(ip, n=3):
+	udp_ip_hdr = build_ip_header( dst = ip_to_int(ip), ttl = 3, proto = 17 )
+	udp_hdr = build_udp_header( spt = 1234, dpt = 4321, len = 8 )
+	if debug:
+		f.write( udp_ip_hdr + udp_hdr )
+	i = 0
+	while i < n: 
+		s.sendto( udp_ip_hdr + udp_hdr, (ip,port) )
+		i+=1
+		
+def green(ip, n=3):
+	tcp_pkt = build_tcp_syn_packet( src=src, dst=ip_to_int(ip), spt=spt, dpt=4321, seq=seq, ttl=3, data="meh " )
+	if debug:
+		f.write( tcp_pkt )
+	i = 0
+	while i < n: 
+		s.sendto( tcp_pkt, (ip,port) )
+		i+=1
+
+def blue(ip, n=3):
+	pkt=build_icmp_echo_packet(dst = ip_to_int(ip), ttl = 3 )
+	if debug:
+		f.write( pkt )
+	i = 0
+	while i < n : 
+		s.sendto( pkt, (ip,port) )
+		i+=1
+
 
 def fwd_netblock( num ):
 	x_inner = num % 16
@@ -42,11 +85,35 @@ def rev_netblock( num ):
 	return y_outer * 4096 + y_inner * 256 + x_outer * 16 + x_inner
 
 def fwd_xkcd( num ):
-	return xkcd.forward[num]
+	return xkcd.forward_xkcd[num]
 
 def rev_xkcd( num ):
-	return xkcd.reverse[num]
+	return xkcd.reverse_xkcd[num]
 
+def get_addresses_from_bmp( filename ):
+	x = BMPWrapper( filename )
+	i = 0
+	r_addr = []
+	g_addr = []
+	b_addr = []
+	while i < x.biWidth*x.biHeight:
+		if x.rgbdata[i]:
+			a = x.rgbdata[i] >> 24 & 0xFF
+			r = x.rgbdata[i] >> 16 & 0xFF
+			g = x.rgbdata[i] >>  8 & 0xFF
+			b = x.rgbdata[i]       & 0xFF
+			pixel = fwd_map(i)
+			#address = i
+			# FIXME: separate r/g/b?
+			# FIXME: deal with intensity?
+			if r:
+				r_addr.append(to_addr(0x817b0000 |fwd_map(i)))
+			if g:
+				g_addr.append(to_addr(0x817b0000 |fwd_map(i)))
+			if b:
+				b_addr.append(to_addr(0x817b0000 |fwd_map(i)))
+		i += 1
+	return ( r_addr, g_addr, b_addr, )
 
 def get_pixels_from_bmp( filename ):
 	x = BMPWrapper( filename )
@@ -120,7 +187,7 @@ def draw_pixels( pixels ):
 def shift_pixels( pixels, x, y, wrap=True ):
 	newpixels = []
 	for pos, r, g, b in pixels:
-		new_pos_xy = fwd_netblock( pos ) + x + dims['x'] * y
+		new_pos_xy = fwd_map( pos ) + x + dims['x'] * y
 		if new_pos_xy < ( dims['x'] * dims['y'] ) or wrap:
 			new_pos = rev_netblock( new_pos_xy % ( dims['x'] * dims['y'] ) )
 			newpixels.append( ( new_pos, r, g, b, ) )
@@ -130,6 +197,19 @@ def draw_bmp( filename ):
 	pixels = get_pixels_from_bmp(filename)
 	draw_pixels( pixels )
 
+def set_map( fwd ):
+	global fwd_map
+	fwd_map = fwd
+
+def alt_draw( filename ):
+	r, g, b = get_addresses_from_bmp(filename)
+	print type(r),len(r)
+	for i in r:
+		red(i)
+	for i in g:
+		green(i)
+	for i in b:
+		blue(i)
 
 if __name__ == "__main__":
 	print sys.argv
