@@ -43,6 +43,7 @@
 #include "subnets.h"
 #include "fwrules.h"
 #include "globals.h"
+#include <pwd.h>
 
 /* the minimum elapsed time between packets, in milliseconds. this corresponds
  * to a sustainable 24 frames per second */
@@ -52,6 +53,10 @@
 
 /* the snaplen. 80 bytes should be sufficient */
 #define SNAPLEN 80
+
+/* an optional uid/gid to drop to */
+//#define UID -1
+//#define GID -1
 
 
 
@@ -329,6 +334,51 @@ void checklisten(int listen)
 	}
 }
 
+
+#ifdef UID
+#ifdef GID
+/*
+ * function:	setuidgid()
+ * purpose:		become an unpriviledged user
+ * recieves:	user id, group id
+ * Courtesy of Terry Burton 
+ */
+void setuidgid(int user_id, int group_id)
+{
+    if ((group_id != -1) && (getgid() != (gid_t)group_id))
+    {
+        if (setgid(group_id) < 0) {
+              printf("Can not set gid: %d\n", group_id);
+              exit(1);
+        }
+    }
+
+    if ((user_id != -1) && (getuid() != (uid_t)user_id))
+    {
+        struct passwd *pw = getpwuid(user_id);
+        if (pw != NULL)
+        {
+            if ((getuid() == 0) && (initgroups(pw->pw_name, group_id) < 0))
+            /* getpwuid and initgroups may use the same static buffers */
+            {
+                   printf("Can not initgroups(%s,%d)",pw->pw_name, group_id);
+                   exit(1);
+            }
+        }
+
+        /** just to be on a safe side... **/
+        endgrent();
+        endpwent();
+
+        if (setuid(user_id) < 0) {
+            printf("Can not set uid: %d\n", user_id);
+            exit(1);
+        }
+    }
+}
+#endif
+#endif
+
 /*
  * function:	main
  * purpose:	to set stuff up and get things rolling. duh. 
@@ -396,6 +446,12 @@ int main(int argc, char* argv[])
 	const u_char* packet;
 	const struct sniff_ethernet *ethernet; /* The ethernet header */
 	const struct sniff_ip *ip; /* The IP header */
+
+#ifdef UID
+#ifdef GID
+	setuidgid(UID, GID);
+#endif
+#endif
 
 
 	/* start listening for clients */
