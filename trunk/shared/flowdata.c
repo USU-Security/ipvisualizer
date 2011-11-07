@@ -41,7 +41,11 @@ inline int vflowpacketsize(struct verbosefirewall* f)
 
 inline int subnetpacketsize(struct subnetpacket* s)
 {
+#ifdef VERBOSE_PACKET
 	return(2*sizeof(unsigned short) + 2*sizeof(unsigned int) + sizeof(subnetword) * s->count);
+#else
+	return(2*sizeof(unsigned short) + sizeof(subnetword) * s->count);
+#endif
 }
 
 /* callee has the duty to free any allocated data */

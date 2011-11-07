@@ -43,7 +43,7 @@
 
 #include "libipulog/libipulog.h"
 
-#define MAXLEN 1500
+#define MAXLEN 1500000
 
 
 /* the minimum elapsed time between packets, in milliseconds. this corresponds
@@ -64,7 +64,14 @@
 unsigned long long lastupdate = 0;
 
 struct packetheader flowbuffer;
+#ifdef VERBOSE_FIREWALL
 struct verbosefirewall *buffer = 0;
+#else
+struct fwflowpacket *buffer;
+#endif
+
+struct subnetpacket* subnets;
+struct packetheader cachedsubnets;
 unsigned int clients[MAXCLIENTS] = {0};
 int sendsock;
 int numclients = 0;
@@ -84,12 +91,20 @@ inline void flushbuffer() {
                 if (clients[i]) {
                         sin.sin_addr.s_addr = clients[i];
                         int len = sendto(sendsock, &flowbuffer,
+#ifdef VERBOSE_FIREWALL
                                         vflowpacketsize(buffer) + SIZEOF_PACKETHEADER,
+#else
+                                        fwflowpacketsize(buffer) + SIZEOF_PACKETHEADER,
+#endif
                                         0, (struct sockaddr*)&sin, sizeof(sin));
 
                         if (len < 0) {
                                 printf("error writing %i bytes: %s\n",
+#ifdef VERBOSE_FIREWALL
                                         vflowpacketsize(buffer) + SIZEOF_PACKETHEADER,
+#else
+                                        fwflowpacketsize(buffer) + SIZEOF_PACKETHEADER,
+#endif
                                         strerror(errno));
                         } else {
                         }
@@ -107,33 +122,42 @@ inline void flushbuffer() {
  * recieves:    the source ip, the destination ip, the prefix number
  *                              the packet type
  */
+#ifdef VERBOSE_FIREWALL
 void report(unsigned int src, unsigned int dst, unsigned char type, unsigned short srcport, unsigned short dstport) {
 		if ((src & NETMASK) == NETBASE)
 		{
-                buffer->data[buffer->count].local = src & ~NETMASK;
-				buffer->data[buffer->count].remote = dst;
-				buffer->data[buffer->count].incoming = 0;
-				if (type == 6 || type == 17) 
-				{
-					buffer->data[buffer->count].localport = srcport;
-					buffer->data[buffer->count].remoteport = dstport;
-				}
-					
+                	buffer->data[buffer->count].local = src & ~NETMASK;
+			buffer->data[buffer->count].remote = dst;
+			buffer->data[buffer->count].incoming = 0;
+			if (type == 6 || type == 17) 
+			{
+				buffer->data[buffer->count].localport = srcport;
+				buffer->data[buffer->count].remoteport = dstport;
+			}
 		}
+#else
+void report(unsigned int src, unsigned int dst) {
+	buffer->data[buffer->count].rule = 0;
+	if ((src & NETMASK) == NETBASE)
+		buffer->data[buffer->count].local = src & ~NETMASK;
+#endif
         else if ((dst & NETMASK) == NETBASE)
+	{
+		buffer->data[buffer->count].local = dst & ~NETMASK;
+#ifdef VERBOSE_FIREWALL
+		buffer->data[buffer->count].remote = src;
+		buffer->data[buffer->count].incoming = 1;
+		if (type == 6 || type == 17) 
 		{
-                buffer->data[buffer->count].local = dst & ~NETMASK;
-				buffer->data[buffer->count].remote = src;
-				buffer->data[buffer->count].incoming = 1;
-				if (type == 6 || type == 17) 
-				{
-					buffer->data[buffer->count].localport = dstport;
-					buffer->data[buffer->count].remoteport = srcport;
-				}
+			buffer->data[buffer->count].localport = dstport;
+			buffer->data[buffer->count].remoteport = srcport;
 		}
+#endif
+	}
         else
                 /* ignore the packet */
                 return;
+#if 0
 		if (type == 6) //tcp
 			buffer->data[buffer->count].packet = TCP;
 		else if (type == 17) 
@@ -144,12 +168,13 @@ void report(unsigned int src, unsigned int dst, unsigned char type, unsigned sho
 			buffer->data[buffer->count].localport = 0;
 			buffer->data[buffer->count].remoteport = 0;
 		}
-//*
+#endif
+
+#ifdef VERBOSE_FIREWALL
           printf("saw flow from xx.xx.%i.%i\n",
                           (buffer->data[buffer->count].local & 0x0000ff00) >> 8,
                                            buffer->data[buffer->count].local & 0x000000ff);
-// */
-
+#endif
         buffer->count++;
         if (buffer->count >= MAXINDEX || lastupdate + MINRATE < gettime())
                 flushbuffer();
@@ -223,9 +248,14 @@ int main(int argc, char* argv[])
 
 	/* set up our buffer pointer */
 	flowbuffer.version = VERSION;
+#ifdef VERBOSE_FIREWALL
 	flowbuffer.packettype = PKT_VERBOSEFIREWALL;
-	flowbuffer.reserved = 0;
 	buffer = (struct verbosefirewall*)flowbuffer.data;
+#else
+	flowbuffer.packettype = PKT_FIREWALL;
+	buffer = (struct fwflowpacket*)flowbuffer.data;
+#endif
+	flowbuffer.reserved = 0;
 	buffer->base = NETBASE;
 	buffer->mask = 16;
 	buffer->count=0;
@@ -240,7 +270,10 @@ int main(int argc, char* argv[])
 		int len = ipulog_read(h, ulogbuffer, MAXLEN, 1);
 		if (len <= 0) 
 		{
+			printf("ERROR(%d)\n",len);
 			ipulog_perror("ipulog_read returned a value less than 0");
+			if (len == -1) 
+				continue;
 			return 2;
 		}
 		/* do something with packet */
@@ -256,7 +289,7 @@ int main(int argc, char* argv[])
 		ulog_packet_msg_t *packet; 
 		while(packet = ipulog_get_packet(h, ulogbuffer, len))
 		{
-			//*
+#ifdef VERBOSE_FIREWALL
 			printf("\n");
 			printf("mark: %u\n", packet->mark);
 			printf("timestamp_sec: %u\n", packet->timestamp_sec);
@@ -268,13 +301,17 @@ int main(int argc, char* argv[])
 			printf("prefix: %s\n", packet->prefix);
 			printf("mac: %02hhX:%02hhX:%02hhX:%02hhX:%02hhX:%02hhX\n", packet->mac[0], packet->mac[1], packet->mac[2], packet->mac[3], packet->mac[4], packet->mac[5]);
 			printf("\t");
-			// */
 			/* convert the prefix to an unsigned short int */
 			//unsigned short prefix = strtol(packet->prefix, NULL, 16);
 			ip = (struct sniff_ip*)(&(packet->payload[0]));
 			//void report(unsigned int src, unsigned int dst, unsigned char type, unsigned short srcport, unsigned short dstport) {
 			struct tcp_udp * p = (struct tcp_udp*)IP_NEXT(ip);
 			report(ntohl(ip->ip_src), ntohl(ip->ip_dst), ip->ip_p, p->srcport, p->dstport);
+#else
+			ip = (struct sniff_ip*)(&(packet->payload[0]));
+			report(ntohl(ip->ip_src), ntohl(ip->ip_dst));
+#endif
+
 		}
 	}
 

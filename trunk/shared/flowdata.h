@@ -28,6 +28,10 @@
 #ifndef FLOWDATA_H
 #define FLOWDATA_H
 
+/* the mask to watch */
+#define NETMASK 0XFFFF0000
+/* the base ip */
+#define NETBASE ((129<<24)|(123<<16)|(0 << 8)|(0))
 /* how often the client should check in */
 #define HEARTBEAT 1
 /* how long until we drop a client */
@@ -111,7 +115,7 @@ struct flowpacket {
 /* defines for the firewall data */
 typedef struct t_fwflowdata {
 	/* 16 bits for the last two octets of the ip */
-	unsigned short ip;
+	unsigned short local;
 	/* 16 bites for the rule number */
 	unsigned short rule;
 } fwflowdata;
@@ -136,8 +140,10 @@ typedef struct subnetword_t {
 struct subnetpacket {
 	unsigned short count;
 	unsigned short requestnum;
+#ifdef VERBOSE_FIREWALL
 	unsigned int base;
 	unsigned int mask;
+#endif
 	subnetword subnets[MAXINDEX];
 };
 
