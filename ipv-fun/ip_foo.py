@@ -66,12 +66,12 @@ def build_packet_x( ):
 	icmp_hdr = build_icmp_header( type=8, code=0, id=1337 )
 	return ip_hdr + icmp_hdr
 
-def build_icmp_echo_packet( src=0, dst=0, spt=0, dpt=0, ttl=2, seq=0, data='' ):
+def build_icmp_echo_packet( src=0, dst=0, spt=0, dpt=0, ttl=10, seq=0, data='' ):
 	ip_hdr = build_ip_header( src=src, dst=dst, flags=0, ttl=ttl, proto=1 )
 	icmp_hdr = build_icmp_header( type=8, data=data )
 	return ip_hdr + icmp_hdr
 
-def build_tcp_syn_packet( src=0, dst=0, spt=0, dpt=0, ttl=2, seq=0, data='' ):
+def build_tcp_syn_packet( src=0, dst=0, spt=0, dpt=0, ttl=10, seq=0, data='' ):
 	#tcp_ip_hdr = build_ip_header( dst = 0x817b0000 | pixel[P], ttl = 3, proto = 6, flags=4 )
 	#tcp_hdr = build_tcp_header( spt = 1234, dpt = 4321, flags=2, seq=random.getrandbits(32), win=2048 )
 	ip_hdr = build_ip_header( src=src, dst=dst, flags=0, ttl=ttl, proto=6 )
