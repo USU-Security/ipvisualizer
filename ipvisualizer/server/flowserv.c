@@ -519,13 +519,16 @@ int main(int argc, char* argv[])
 					timersub(&start_time, &header->ts, &offset);
 					timeradd(&header->ts, &minrate, &next_step);
 				} else if (timercmp(&header->ts, &next_step, >)) {
-					// FIXME: sleep here
 					gettimeofday(&current_time, 0);
 					timeradd(&header->ts, &offset, &next_time);
 					timersub(&next_time, &current_time, &wait_time);
 
-					sleep(wait_time.tv_sec);
-					usleep(wait_time.tv_usec);
+					if (wait_time.tv_sec > 0) {
+						sleep(wait_time.tv_sec);
+					}
+					if (wait_time.tv_usec > 0) {
+						usleep(wait_time.tv_usec);
+					}
 
 					gettimeofday(&current_time, 0);
 					timersub(&current_time, &offset, &next_step);
