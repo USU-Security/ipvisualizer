@@ -81,8 +81,8 @@ DIST_COMMON = INSTALL NEWS README AUTHORS ChangeLog \
 	$(top_srcdir)/configure $(am__configure_deps) \
 	$(srcdir)/config.h.in $(top_srcdir)/firewallsrv/Makefile.in \
 	$(top_srcdir)/iptulog/Makefile.in \
-	$(top_srcdir)/shared/Makefile.in COPYING compile install-sh \
-	missing
+	$(top_srcdir)/shared/Makefile.in COPYING compile depcomp \
+	install-sh missing
 ACLOCAL_M4 = $(top_srcdir)/aclocal.m4
 am__aclocal_m4_deps = $(top_srcdir)/configure.ac
 am__configure_deps = $(am__aclocal_m4_deps) $(CONFIGURE_DEPENDENCIES) \
@@ -223,6 +223,7 @@ LDFLAGS = @LDFLAGS@
 LIBOBJS = @LIBOBJS@
 LIBS = @LIBS@
 LTLIBOBJS = @LTLIBOBJS@
+MAINT = @MAINT@
 MAKEINFO = @MAKEINFO@
 MKDIR_P = @MKDIR_P@
 OBJEXT = @OBJEXT@
@@ -287,7 +288,7 @@ all: config.h
 .SUFFIXES:
 am--refresh: Makefile
 	@:
-$(srcdir)/Makefile.in:  $(srcdir)/Makefile.am  $(am__configure_deps)
+$(srcdir)/Makefile.in: @MAINTAINER_MODE_TRUE@ $(srcdir)/Makefile.am  $(am__configure_deps)
 	@for dep in $?; do \
 	  case '$(am__configure_deps)' in \
 	    *$$dep*) \
@@ -314,9 +315,9 @@ Makefile: $(srcdir)/Makefile.in $(top_builddir)/config.status
 $(top_builddir)/config.status: $(top_srcdir)/configure $(CONFIG_STATUS_DEPENDENCIES)
 	$(SHELL) ./config.status --recheck
 
-$(top_srcdir)/configure:  $(am__configure_deps)
+$(top_srcdir)/configure: @MAINTAINER_MODE_TRUE@ $(am__configure_deps)
 	$(am__cd) $(srcdir) && $(AUTOCONF)
-$(ACLOCAL_M4):  $(am__aclocal_m4_deps)
+$(ACLOCAL_M4): @MAINTAINER_MODE_TRUE@ $(am__aclocal_m4_deps)
 	$(am__cd) $(srcdir) && $(ACLOCAL) $(ACLOCAL_AMFLAGS)
 $(am__aclocal_m4_deps):
 
@@ -327,7 +328,7 @@ config.h: stamp-h1
 stamp-h1: $(srcdir)/config.h.in $(top_builddir)/config.status
 	@rm -f stamp-h1
 	cd $(top_builddir) && $(SHELL) ./config.status config.h
-$(srcdir)/config.h.in:  $(am__configure_deps) 
+$(srcdir)/config.h.in: @MAINTAINER_MODE_TRUE@ $(am__configure_deps) 
 	($(am__cd) $(top_srcdir) && $(AUTOHEADER))
 	rm -f stamp-h1
 	touch $@
@@ -504,9 +505,6 @@ distdir: $(DISTFILES)
 	      || exit 1; \
 	  fi; \
 	done
-	$(MAKE) $(AM_MAKEFLAGS) \
-	  top_distdir="$(top_distdir)" distdir="$(distdir)" \
-	  dist-hook
 	-test -n "$(am__skip_mode_fix)" \
 	|| find "$(distdir)" -type d ! -perm -755 \
 		-exec chmod u+rwx,go+rx {} \; -o \
@@ -701,8 +699,7 @@ install-dvi: install-dvi-recursive
 install-dvi-am:
 
 install-exec-am:
-	@$(NORMAL_INSTALL)
-	$(MAKE) $(AM_MAKEFLAGS) install-exec-hook
+
 install-html: install-html-recursive
 
 install-html-am:
@@ -743,61 +740,24 @@ ps-am:
 
 uninstall-am:
 
-.MAKE: $(am__recursive_targets) all install-am install-exec-am \
-	install-strip
+.MAKE: $(am__recursive_targets) all install-am install-strip
 
 .PHONY: $(am__recursive_targets) CTAGS GTAGS TAGS all all-am \
 	am--refresh check check-am clean clean-cscope clean-generic \
 	cscope cscopelist-am ctags ctags-am dist dist-all dist-bzip2 \
-	dist-gzip dist-hook dist-lzip dist-shar dist-tarZ dist-xz \
-	dist-zip distcheck distclean distclean-generic distclean-hdr \
+	dist-gzip dist-lzip dist-shar dist-tarZ dist-xz dist-zip \
+	distcheck distclean distclean-generic distclean-hdr \
 	distclean-tags distcleancheck distdir distuninstallcheck dvi \
 	dvi-am html html-am info info-am install install-am \
 	install-data install-data-am install-dvi install-dvi-am \
-	install-exec install-exec-am install-exec-hook install-html \
-	install-html-am install-info install-info-am install-man \
-	install-pdf install-pdf-am install-ps install-ps-am \
-	install-strip installcheck installcheck-am installdirs \
-	installdirs-am maintainer-clean maintainer-clean-generic \
-	mostlyclean mostlyclean-generic pdf pdf-am ps ps-am tags \
-	tags-am uninstall uninstall-am
+	install-exec install-exec-am install-html install-html-am \
+	install-info install-info-am install-man install-pdf \
+	install-pdf-am install-ps install-ps-am install-strip \
+	installcheck installcheck-am installdirs installdirs-am \
+	maintainer-clean maintainer-clean-generic mostlyclean \
+	mostlyclean-generic pdf pdf-am ps ps-am tags tags-am uninstall \
+	uninstall-am
 
-
-dist-hook:
-	echo "#the visualization server. Client only" >> $(distdir)/ipvisualizer.conf
-	echo "server = localhost" >> $(distdir)/ipvisualizer.conf
-	echo "" >> $(distdir)/ipvisualizer.conf
-	echo "#the listening port" >> $(distdir)/ipvisualizer.conf
-	echo "port = 17843" >> $(distdir)/ipvisualizer.conf
-	echo "" >> $(distdir)/ipvisualizer.conf
-	echo "#the local network " >> $(distdir)/ipvisualizer.conf
-	echo "localnet = 10.1.0.0/16" >> $(distdir)/ipvisualizer.conf
-	echo "" >> $(distdir)/ipvisualizer.conf
-	echo "#the path to the binary subnet specification." >> $(distdir)/ipvisualizer.conf
-	echo "#Server only" >> $(distdir)/ipvisualizer.conf
-	echo "#subnetpath = " >> $(distdir)/ipvisualizer.conf
-	echo "" >> $(distdir)/ipvisualizer.conf
-	echo "#the authorization for the subnet specification (user:pass). Server only" >> $(distdir)/ipvisualizer.conf
-	echo "#auth = user:password" >> $(distdir)/ipvisualizer.conf
-	echo "" >> $(distdir)/ipvisualizer.conf
-	echo "#which interface to sniff on. defaults to eth0. Server only" >> $(distdir)/ipvisualizer.conf
-	echo "#interface = eth0" >> $(distdir)/ipvisualizer.conf
-	echo "" >> $(distdir)/ipvisualizer.conf
-	echo "" >> $(distdir)/ipvisualizer.conf
-	echo "#the following commands are executed when the user interacts with the program" >> $(distdir)/ipvisualizer.conf
-	echo "#a %s should be used to indicate where an argument should be stored" >> $(distdir)/ipvisualizer.conf
-	echo "#ex:" >> $(distdir)/ipvisualizer.conf
-	echo "#rightclickcmd = firefox http://www.networksolutions.com/whois/results.jsp?ip=%s" >> $(distdir)/ipvisualizer.conf
-	echo "#" >> $(distdir)/ipvisualizer.conf
-	echo "#This command executes with a left click on a single ip as its argument" >> $(distdir)/ipvisualizer.conf
-	echo "#leftclickcmd = echo User left clicked on ip %s" >> $(distdir)/ipvisualizer.conf
-	echo "#this command executes with a right click on a single ip as its argument" >> $(distdir)/ipvisualizer.conf
-	echo "#rightclickcmd = echo User right clicked on ip %s" >> $(distdir)/ipvisualizer.conf
-	echo "#This command executes when a network is selected with the right mouse button" >> $(distdir)/ipvisualizer.conf
-	echo "#rightclicknet = echo User selected the network %s with the right mouse button" >> $(distdir)/ipvisualizer.conf
-
-install-exec-hook:
-	if test -e /etc/ipvisualizer.conf; then echo "Existing Configuration already found"; else cp $(srcdir)/ipvisualizer.conf /etc/; fi
 
 # Tell versions [3.59,3.63) of GNU make to not export all variables.
 # Otherwise a system limit (for SysV at least) may be exceeded.

@@ -2,30 +2,25 @@
 # Process this file with autoconf to produce a configure script.
 
 AC_PREREQ(2.61)
-AC_INIT(IPVISUALIZER, 0.03, rian.shelley at usu.edu)
+AC_INIT(IPVISUALIZER, 0.04, esk-ipvisualizer@esk.cs.usu.edu)
 AM_INIT_AUTOMAKE
 AC_CONFIG_SRCDIR([client/constants.h])
 AM_CONFIG_HEADER([config.h])
+
+AM_MAINTAINER_MODE([enable])
 
 # Checks for programs.
 AC_PROG_CC
 AC_PROG_MAKE_SET
 
 # Checks for libraries.
-# FIXME: Replace `main' with a function in `-lGL':
-AC_CHECK_LIB([GL], [main])
-# FIXME: Replace `main' with a function in `-lGLU':
-AC_CHECK_LIB([GLU], [main])
-# FIXME: Replace `main' with a function in `-lSDL':
-AC_CHECK_LIB([SDL], [main])
-# FIXME: Replace `main' with a function in `-lavcodec':
-AC_CHECK_LIB([avcodec], [main])
-# FIXME: Replace `main' with a function in `-lavformat':
-AC_CHECK_LIB([avformat], [main])
-# FIXME: Replace `main' with a function in `-lpcap':
-AC_CHECK_LIB([pcap], [main])
-# FIXME: Replace `main' with a function in `-lpthread':
-AC_CHECK_LIB([pthread], [main])
+AC_CHECK_LIB([GL], [glEnable])
+AC_CHECK_LIB([GLU], [gluOrtho2D])
+AC_CHECK_LIB([SDL], [SDL_Init])
+AC_CHECK_LIB([avcodec], [avcodec_open])
+AC_CHECK_LIB([avformat], [avformat_alloc_context])
+AC_CHECK_LIB([pcap], [pcap_open_live])
+AC_CHECK_LIB([pthread], [pthread_create])
 
 if test "$ac_cv_lib_SDL_main" == no
 then
