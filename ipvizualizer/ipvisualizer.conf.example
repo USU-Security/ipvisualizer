@@ -30,5 +30,5 @@ localnet = 10.1.0.0/16
 #This command executes when a network is selected with the right mouse button
 #rightclicknet = echo User selected the network %s with the right mouse button
 
-pcapfile = /home/esk/border-2014-11-10.pcap
+#pcapfile = /srv/border-2014-11-10.pcap
 

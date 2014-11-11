@@ -25,7 +25,7 @@
  */
 
 #include <stdio.h>
-#include <pcap.h>
+#include <pcap/pcap.h>
 #include <features.h>
 #include <sys/time.h>
 #include "structs.h"
@@ -492,10 +492,47 @@ int main(int argc, char* argv[])
 	/* create a socket we can send with */
 	sendsock = socket(AF_INET, SOCK_DGRAM, 0);
 
+	struct timeval start_time = {0};
+	struct timeval offset = {0};
+	struct timeval initial_time = {0};
+	struct timeval minrate = {0, MINRATE*1000};
+	struct timeval next_step = {0, 0};
 
 	for(;;) {
+		struct timeval wait_time = {0};
+		struct timeval current_time = {0};
+		struct timeval next_time = {0};
 		int result;
+		if (!numclients) {
+			/* don't bother if there aren't any clients */
+			usleep(300000);  // 300ms
+
+			// check for clients
+			checklisten(listensock);
+			continue;
+		}
 		if(1 == (result = pcap_next_ex(handle, &header, &packet))) {
+			if (config_string(CONFIG_PCAPFILE)) {
+				if (start_time.tv_sec == 0) {
+					// initialize
+					gettimeofday(&start_time, 0);
+					timersub(&start_time, &header->ts, &offset);
+					timeradd(&header->ts, &minrate, &next_step);
+				} else if (timercmp(&header->ts, &next_step, >)) {
+					// FIXME: sleep here
+					gettimeofday(&current_time, 0);
+					timeradd(&header->ts, &offset, &next_time);
+					timersub(&next_time, &current_time, &wait_time);
+
+					sleep(wait_time.tv_sec);
+					usleep(wait_time.tv_usec);
+
+					gettimeofday(&current_time, 0);
+					timersub(&current_time, &offset, &next_step);
+					timeradd(&next_step, &minrate, &next_step);
+				}
+			}
+
 			ethernet = (struct sniff_ethernet*)(packet);
 			if (ntohs(ethernet->ether_type) == T_IP)
 				ip = (struct sniff_ip*)(packet + SIZE_ETHERNET);
@@ -523,6 +560,15 @@ int main(int argc, char* argv[])
 
 		} else if (result == 0) {
 			/* supposed to be if the timeout expires, but may not need this */
+			printf("timeout expired");
+		} else if (result == -2) {
+			/* End of .pcap file reached
+			 * FIXME: probably loop here?
+			 */
+			break;
+		} else if (result == -1) {
+			pcap_perror(handle, "libpcap error: ");
+			break;
 		}
 		/* do other misc stuff here */
 		/* like check for udp packets */
