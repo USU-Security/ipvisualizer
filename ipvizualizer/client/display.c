@@ -132,8 +132,19 @@ void pulldata(char start);
  * */
 int main(int argc, char** argv)
 {
-	config_loadfile("/etc/ipvisualizer.conf");
+	/* load command line args to check for config file option */
 	config_loadargs(argc, argv);
+
+	if (config_string(CONFIG_CONFIGFILE)){
+		config_loadfile(config_string(CONFIG_CONFIGFILE));
+	}
+	else {
+		config_loadfile("/etc/ipvisualizer.conf");
+	}
+
+	/* load command line args again to be sure they override the config file */
+	config_loadargs(argc, argv);
+
 	//get values for the variables that used to be constants from the config.
 	initunconstants();
 	allocatescreen();
@@ -495,7 +506,7 @@ void pulldata(char start)
 	sin.sin_family = AF_INET;
 	sin.sin_port = htons(serverport);
 	sin.sin_addr.s_addr = serverip;
-	ph.version = VERSION;
+	ph.version = FLOW_VERSION;
 	if (!sock)
 	{
 		ph.packettype = PKT_SUBNET;
@@ -1156,21 +1167,21 @@ void update_image(struct flowpacket* fp)
 		/*
 		 * increment the local ip by the diff. overflow is ok
 		 */
-		fp->data[i].ip += diff;
+		fp->data[i].local += diff;
 		/* 
 		 * need a more intelligent check of subnet. For now, just skip packets
 		 * that are outside of our screen space
 		 */
 		
-		if (((fp->data[i].ip & ~localmask)) != fp->data[i].ip)
+		if (((fp->data[i].local & ~localmask)) != fp->data[i].local)
 			continue;
 
-		int pixel = mappixel(fp->data[i].ip);
+		int pixel = mappixel(fp->data[i].local);
 
 		/*
 		   printf("jumping pixel for ip 129.123.%i.%i\n",
-		   (fp.data[i].ip & 0x0000ff00) >> 8,
-		   fp.data[i].ip & 0x000000ff);
+		   (fp.data[i].local & 0x0000ff00) >> 8,
+		   fp.data[i].local & 0x000000ff);
 		   */
 		switch (fp->data[i].packet)
 		{
@@ -1222,9 +1233,9 @@ void update_firewall(struct fwflowpacket* fp)
 	pthread_mutex_lock(&imglock);
 	for (i = 0; i < max; i++)
 	{
-		if (((fp->data[i].ip & ~localmask)) != fp->data[i].ip)
+		if (((fp->data[i].local & ~localmask)) != fp->data[i].local)
 			continue;
-		int pixel = mappixel(fp->data[i].ip);
+		int pixel = mappixel(fp->data[i].local);
 
 		datapointdrop(&pointdata[pixel], 192);
 		if (pointdata[pixel].msg)
@@ -1235,7 +1246,7 @@ void update_firewall(struct fwflowpacket* fp)
 		if (rules[fp->data[i].rule])
 			pointdata[pixel].msg = 0; //strdup(rules[fp->data[i].rule]);
 		if (rules[fp->data[i].rule]) 
-			printdisplay(rules[fp->data[i].rule], fp->data[i].ip);
+			printdisplay(rules[fp->data[i].rule], fp->data[i].local);
 	}
 	pthread_mutex_unlock(&imglock);
 	/* unlock it */

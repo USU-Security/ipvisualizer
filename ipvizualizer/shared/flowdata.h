@@ -28,6 +28,8 @@
 #ifndef FLOWDATA_H
 #define FLOWDATA_H
 
+#define VERBOSE_FIREWALL 1
+
 /* the mask to watch */
 #define NETMASK 0XFFFF0000
 /* the base ip */
@@ -47,7 +49,8 @@
 /* this should be set to the MTU */
 #define BUFFERSIZE 1400
 /* our current version */
-#define VERSION 1
+#define FLOW_VERSION 1
+
 /* framerate */
 #define FRAMERATE (1.0/24.0)
 
@@ -90,7 +93,7 @@ struct verbosefirewall {
 
 typedef struct t_flowdata {
 	/* 16 bits for the last two octets of the ip */
-	unsigned short ip;
+	unsigned short local;
 	/* 11 bits (represents up to 2048) for the packet size */
 	unsigned int packetsize:11;
 	/* 2 bits for the packet type */

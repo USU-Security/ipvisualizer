@@ -135,12 +135,12 @@ void report(unsigned int src, unsigned int dst, unsigned short size, enum packet
 	if ((src & localmask) == localip)
 	{
 		buffer->data[buffer->count].incoming = 0;
-		buffer->data[buffer->count].ip = src & ~localmask;
+		buffer->data[buffer->count].local = src & ~localmask;
 	}
 	else if ((dst & localmask) == localip)
 	{
 		buffer->data[buffer->count].incoming = 1;
-		buffer->data[buffer->count].ip = dst & ~localmask;
+		buffer->data[buffer->count].local = dst & ~localmask;
 	}
 	else 
 	{
@@ -151,8 +151,8 @@ void report(unsigned int src, unsigned int dst, unsigned short size, enum packet
 	buffer->data[buffer->count].packetsize = size;
 /*
 	printf("saw flow from xx.xx.%i.%i\n",
-		(buffer.data[buffer.count].ip & 0x0000ff00) >> 8,
-		 buffer.data[buffer.count].ip & 0x000000ff);
+		(buffer.data[buffer.count].local & 0x0000ff00) >> 8,
+		 buffer.data[buffer.count].local & 0x000000ff);
 */
 
 	buffer->count++;
@@ -271,7 +271,7 @@ void sendrules(int sock, struct sockaddr* address, socklen_t fromlen)
 	int count = 0;
 	struct fwrule* tmp = firewallrules;
 	struct packetheader ph;
-	ph.version = VERSION;
+	ph.version = FLOW_VERSION;
 	ph.packettype = PKT_FWRULE;
 	ph.reserved = 0;
 	while (tmp)
@@ -385,21 +385,46 @@ void setuidgid(int user_id, int group_id)
  */
 int main(int argc, char* argv[])
 {
-	config_loadfile("/etc/ipvisualizer.conf");
+	/* load command line args to check for config file option */
 	config_loadargs(argc, argv);
+
+	if (config_string(CONFIG_CONFIGFILE)){
+		config_loadfile(config_string(CONFIG_CONFIGFILE));
+	}
+	else {
+		config_loadfile("/etc/ipvisualizer.conf");
+	}
+
+	/* load command line args again to be sure they override the config file */
+	config_loadargs(argc, argv);
+
 	/* these are loaded from the config, so must happen afterwards */
 	initglobals();
 	char ebuff[PCAP_ERRBUF_SIZE];
 	subnet subarray[MAXINDEX];
 	unsigned int i, j;
+	pcap_t* handle = 0;
+
+	if (!config_string(CONFIG_PCAPFILE) == !config_string(CONFIG_INTERFACE)) {
+		fprintf(stderr, "Must specify exactly one of pcapfile, interface.\n");
+		if (config_string(CONFIG_INTERFACE)){
+			fprintf(stderr, "interface=%s\n", config_string(CONFIG_INTERFACE));
+		}
+		if (config_string(CONFIG_PCAPFILE)){
+			fprintf(stderr, "pcapfile=%s\n", config_string(CONFIG_PCAPFILE));
+		}
+		exit(1);
+	}
+
 	subnets = (struct subnetpacket*)cachedsubnets.data;
-	cachedsubnets.version = VERSION;
+	cachedsubnets.version = FLOW_VERSION;
 	cachedsubnets.packettype = PKT_SUBNET;
 	unsigned int numsubnets = 0;
 	if (config_string(CONFIG_SUBNET))
 		numsubnets = getsubnets(subarray, MAXINDEX, config_string(CONFIG_SUBNET), config_string(CONFIG_AUTH));
 	if (numsubnets > MAXINDEX) 
 		numsubnets = MAXINDEX;
+
 	j = 0;
 	for (i = 0; i < numsubnets; i++) {
 		/* only report the subnets if they are within our range */
@@ -434,7 +459,13 @@ int main(int argc, char* argv[])
 	}
 	*/
 
-	pcap_t* handle = pcap_open_live(config_string(CONFIG_INTERFACE), SNAPLEN, 1, MINRATE, ebuff);
+	if (config_string(CONFIG_INTERFACE)){
+		handle = pcap_open_live(config_string(CONFIG_INTERFACE), SNAPLEN, 1, MINRATE, ebuff);
+		pcap_set_buffer_size(handle, 1024*1024*16);  // 16MB
+	}
+	else {
+		handle = pcap_open_offline(config_string(CONFIG_PCAPFILE), ebuff);
+	}
 
 	if (!handle) {
 		fprintf(stderr, "Couldn't sniff on device %s: %s\n", 

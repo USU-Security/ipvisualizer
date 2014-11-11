@@ -33,12 +33,14 @@ const char * validopts[MAXOPTS][2] = {
 	{"u", "subnetpath"},
 	{"a", "auth"},
 	{"i", "interface"},
+	{"f", "pcapfile"},
+	{"c", "configfile"},
 	{"e", "leftclickcmd"},
 	{"r", "rightclickcmd"},
 	{"n", "rightclicknet"}
 };
 
-const char* config_opts[] = {0, STRPORT, 0, 0, 0, "eth0", 0, 0, 0};
+const char* config_opts[] = {0, STRPORT, 0, 0, 0, 0, 0, 0, 0};
 int optcount = 0;
 
 
