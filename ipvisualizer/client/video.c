@@ -27,8 +27,19 @@
 
 #include <stdlib.h>
 #include <stdio.h>
+
+#if HAVE_FFMPEG_AVCODEC_H
 #include <ffmpeg/avcodec.h>
+#else
+#include <libavcodec/avcodec.h>
+#endif
+
+#if HAVE_FFMPEG_AVFORMAT_H
 #include <ffmpeg/avformat.h>
+#else
+#include <libavformat/avformat.h>
+#endif
+
 #include <string.h>
 #include "../shared/flowdata.h"
 #include "video.h"
