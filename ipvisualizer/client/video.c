@@ -104,9 +104,9 @@ int startvideo(const char* moviefile, int imgwidth, int imgheight)
 	
 	/* TODO: fmt->video_codec will have a default codec. perhaps you should use the default
 	 * if you can't allocate the one you want */
-/*	vid.fmt->video_codec = CODEC_ID_RAWVIDEO; */
-	vid.fmt->video_codec = CODEC_ID_FFV1; 
-//	vid.fmt->video_codec = CODEC_ID_HUFFYUV;
+/*	vid.fmt->video_codec = AV_CODEC_ID_RAWVIDEO; */
+	vid.fmt->video_codec = AV_CODEC_ID_FFV1;
+//	vid.fmt->video_codec = AV_CODEC_ID_HUFFYUV;
 	
 
 	
@@ -121,7 +121,7 @@ int startvideo(const char* moviefile, int imgwidth, int imgheight)
 	vid.c = vid.video_st->codec;
 
 	vid.c->codec_id = vid.fmt->video_codec;
-	vid.c->codec_type = CODEC_TYPE_VIDEO;
+	vid.c->codec_type = AVMEDIA_TYPE_VIDEO;
 	
 	vid.c->bit_rate = 1000000;
 	vid.c->width = imgwidth;
@@ -216,7 +216,7 @@ void writeframe(uint8_t * imgdata, int imgwidth, int imgheight)
 		/* TODO: try without this first, i believe they are one-to-one */
 		//pkt.pts = av_rescale_q(vid.c->coded_frame->pts, vid.c->time_base, vid.video_st->time_base);
 		if (vid.c->coded_frame->key_frame)
-			pkt.flags |= PKT_FLAG_KEY;
+			pkt.flags |= AV_PKT_FLAG_KEY;
 		pkt.stream_index = vid.video_st->index;
 		pkt.data = vid.outbuf;
 		pkt.size = outsize;
@@ -242,7 +242,7 @@ void endvideo()
 		/* TODO: try without this first, i believe they are one-to-one */
 		//pkt.pts = av_rescale_q(vid.c->coded_frame->pts, vid.c->time_base, vid.video_st->time_base);
 		if (vid.c->coded_frame->key_frame)
-			pkt.flags |= PKT_FLAG_KEY;
+			pkt.flags |= AV_PKT_FLAG_KEY;
 		pkt.stream_index = vid.video_st->index;
 		pkt.data = vid.outbuf;
 		pkt.size = outsize;
