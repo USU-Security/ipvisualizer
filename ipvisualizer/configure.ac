@@ -2,7 +2,7 @@
 # Process this file with autoconf to produce a configure script.
 
 AC_PREREQ(2.61)
-AC_INIT(IPVISUALIZER, 0.04, esk-ipvisualizer@esk.cs.usu.edu)
+AC_INIT(IPVISUALIZER, 0.04.1, esk-ipvisualizer@esk.cs.usu.edu)
 AM_INIT_AUTOMAKE
 AC_CONFIG_SRCDIR([client/constants.h])
 AM_CONFIG_HEADER([config.h])
