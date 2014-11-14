@@ -145,6 +145,9 @@
 /* Define to 1 if you can safely include both <sys/time.h> and <time.h>. */
 #undef TIME_WITH_SYS_TIME
 
+/* Set to 1 to enable creating videos */
+#undef USE_FFMPEG
+
 /* Version number of package */
 #undef VERSION
 
