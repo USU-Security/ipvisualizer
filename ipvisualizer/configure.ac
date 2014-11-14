@@ -7,6 +7,10 @@ AM_INIT_AUTOMAKE
 AC_CONFIG_SRCDIR([client/constants.h])
 AM_CONFIG_HEADER([config.h])
 
+AC_ARG_ENABLE([ffmpeg],
+	      AS_HELP_STRING([--enable-ffmpeg], [use ffmpeg libraries to create .avi videos of visualized data])
+)
+
 AM_MAINTAINER_MODE([enable])
 
 # Checks for programs.
@@ -17,8 +21,21 @@ AC_PROG_MAKE_SET
 AC_CHECK_LIB([GL], [glEnable])
 AC_CHECK_LIB([GLU], [gluOrtho2D])
 AC_CHECK_LIB([SDL], [SDL_Init])
-AC_CHECK_LIB([avcodec], [avcodec_open])
-AC_CHECK_LIB([avformat], [avformat_alloc_context])
+
+AS_IF([test "x$enable_ffmpeg" == "xyes"], [
+	AC_DEFINE(USE_FFMPEG, 1, [Set to 1 to enable creating videos])
+	AC_CHECK_LIB([avcodec], [avcodec_open])
+	if test "$ac_cv_lib_avcodec_avcodec_open" == no
+	then
+		AC_MSG_ERROR([please install libavcodec libraries/headers])
+	fi
+	AC_CHECK_LIB([avformat], [avformat_alloc_context])
+	if test "$ac_cv_lib_avformat_avformat_alloc_context" == no
+	then
+		AC_MSG_ERROR([please install libavcodec libraries/headers])
+	fi
+])
+
 AC_CHECK_LIB([pcap], [pcap_open_live])
 AC_CHECK_LIB([pthread], [pthread_create])
 

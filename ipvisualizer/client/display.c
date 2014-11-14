@@ -31,10 +31,12 @@
 #include "../shared/flowdata.h"
 #include "../shared/config.h"
 #include "../config.h" /* the generated includes */
-#if HAVE_LIBAVCODEC && HAVE_LIBAVFORMAT
+
+#if HAVE_LIBAVCODEC && HAVE_LIBAVFORMAT && USE_FFMPEG == 1
 const char moviefile[] = "output.avi";
 #include "video.h"
 #endif
+
 #include <sys/socket.h>
 #include <netinet/in.h>
 #include <stdio.h>
@@ -148,7 +150,7 @@ int main(int argc, char** argv)
 	//get values for the variables that used to be constants from the config.
 	initunconstants();
 	allocatescreen();
-#if HAVE_LIBAVCODEC && HAVE_LIBAVFORMAT
+#if HAVE_LIBAVCODEC && HAVE_LIBAVFORMAT && USE_FFMPEG == 1
 	videoinit();
 #endif
 	int i;
@@ -524,7 +526,7 @@ void pulldata(char start)
 
 void videoon(char b)
 {
-#if HAVE_LIBAVCODEC && HAVE_LIBAVFORMAT
+#if HAVE_LIBAVCODEC && HAVE_LIBAVFORMAT && USE_FFMPEG == 1
 	if (b && !videostate) {
 		videostate = startvideo(moviefile, IMGWIDTH, IMGHEIGHT);
 	} else if (!b && videostate) {
@@ -628,7 +630,7 @@ void keyup(unsigned char k, int x, int y)
 		videoon(0);
 		exit(0);
 		break;
-#if HAVE_LIBAVCODEC && HAVE_LIBAVFORMAT
+#if HAVE_LIBAVCODEC && HAVE_LIBAVFORMAT && USE_FFMPEG == 1
 	case SDLK_v:
 		if (keys[SDLK_LSHIFT] || keys[SDLK_RSHIFT]) 
 			videoon(1);
@@ -1102,7 +1104,7 @@ void display()
 		for (j = 0; j < MAPHEIGHT; j++)
 			datapointdrawpixel(&pointdata[i + j*MAPWIDTH], imgdata, i, j, IMGWIDTH);
 
-#if HAVE_LIBAVCODEC && HAVE_LIBAVFORMAT
+#if HAVE_LIBAVCODEC && HAVE_LIBAVFORMAT && USE_FFMPEG == 1
 	if (videostate)
 		writeframe(imgdata, IMGWIDTH, IMGHEIGHT);
 #endif

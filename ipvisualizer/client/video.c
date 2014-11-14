@@ -23,7 +23,7 @@
  * creator:	rian shelley
  */
 #include "../config.h"
-#if HAVE_LIBAVCODEC && HAVE_LIBAVFORMAT
+#if HAVE_LIBAVCODEC && HAVE_LIBAVFORMAT && USE_FFMPEG == 1
 
 #include <stdlib.h>
 #include <stdio.h>
