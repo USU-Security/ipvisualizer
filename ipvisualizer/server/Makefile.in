@@ -90,11 +90,19 @@ CONFIG_CLEAN_FILES =
 CONFIG_CLEAN_VPATH_FILES =
 am__installdirs = "$(DESTDIR)$(ipvisualizer_flowservprgdir)"
 PROGRAMS = $(ipvisualizer_flowservprg_PROGRAMS)
-am_ipvisualizer_flowserv_OBJECTS = flowserv.$(OBJEXT) \
-	fwrules.$(OBJEXT) globals.$(OBJEXT) sockutils.$(OBJEXT) \
-	subnets.$(OBJEXT) flowdata.$(OBJEXT) config.$(OBJEXT)
+am__dirstamp = $(am__leading_dot)dirstamp
+am_ipvisualizer_flowserv_OBJECTS =  \
+	ipvisualizer_flowserv-flowserv.$(OBJEXT) \
+	ipvisualizer_flowserv-fwrules.$(OBJEXT) \
+	ipvisualizer_flowserv-globals.$(OBJEXT) \
+	ipvisualizer_flowserv-sockutils.$(OBJEXT) \
+	ipvisualizer_flowserv-subnets.$(OBJEXT) \
+	../shared/ipvisualizer_flowserv-flowdata.$(OBJEXT) \
+	../shared/ipvisualizer_flowserv-config.$(OBJEXT)
 ipvisualizer_flowserv_OBJECTS = $(am_ipvisualizer_flowserv_OBJECTS)
 ipvisualizer_flowserv_LDADD = $(LDADD)
+ipvisualizer_flowserv_LINK = $(CCLD) $(ipvisualizer_flowserv_CFLAGS) \
+	$(CFLAGS) $(ipvisualizer_flowserv_LDFLAGS) $(LDFLAGS) -o $@
 AM_V_P = $(am__v_P_@AM_V@)
 am__v_P_ = $(am__v_P_@AM_DEFAULT_V@)
 am__v_P_0 = false
@@ -181,6 +189,8 @@ INSTALL_PROGRAM = @INSTALL_PROGRAM@
 INSTALL_SCRIPT = @INSTALL_SCRIPT@
 INSTALL_STRIP_PROGRAM = @INSTALL_STRIP_PROGRAM@
 LDFLAGS = @LDFLAGS@
+LIBCURL = @LIBCURL@
+LIBCURL_CPPFLAGS = @LIBCURL_CPPFLAGS@
 LIBOBJS = @LIBOBJS@
 LIBS = @LIBS@
 LTLIBOBJS = @LTLIBOBJS@
@@ -200,6 +210,7 @@ SET_MAKE = @SET_MAKE@
 SHELL = @SHELL@
 STRIP = @STRIP@
 VERSION = @VERSION@
+_libcurl_config = @_libcurl_config@
 abs_builddir = @abs_builddir@
 abs_srcdir = @abs_srcdir@
 abs_top_builddir = @abs_top_builddir@
@@ -242,8 +253,10 @@ target_alias = @target_alias@
 top_build_prefix = @top_build_prefix@
 top_builddir = @top_builddir@
 top_srcdir = @top_srcdir@
+AUTOMAKE_OPTIONS = subdir-objects
 ipvisualizer_flowservprgdir = $(prefix)/bin/
-AM_LDFLAGS = -lpcap `curl-config --libs`
+ipvisualizer_flowserv_LDFLAGS = ${pcap_LIBS} ${LIBCURL}
+ipvisualizer_flowserv_CFLAGS = ${pcap_CFLAGS} ${LIBCURL_CPPFLAGS}
 ipvisualizer_flowserv_SOURCES = flowserv.c fwrules.c globals.c sockutils.c subnets.c ../shared/flowdata.c ../shared/config.c fwrules.h globals.h mygettime.h sockutils.h structs.h subnets.h ../shared/config.h ../shared/flowdata.h
 all: all-am
 
@@ -321,66 +334,149 @@ uninstall-ipvisualizer_flowservprgPROGRAMS:
 
 clean-ipvisualizer_flowservprgPROGRAMS:
 	-test -z "$(ipvisualizer_flowservprg_PROGRAMS)" || rm -f $(ipvisualizer_flowservprg_PROGRAMS)
+../shared/$(am__dirstamp):
+	@$(MKDIR_P) ../shared
+	@: > ../shared/$(am__dirstamp)
+../shared/$(DEPDIR)/$(am__dirstamp):
+	@$(MKDIR_P) ../shared/$(DEPDIR)
+	@: > ../shared/$(DEPDIR)/$(am__dirstamp)
+../shared/ipvisualizer_flowserv-flowdata.$(OBJEXT):  \
+	../shared/$(am__dirstamp) ../shared/$(DEPDIR)/$(am__dirstamp)
+../shared/ipvisualizer_flowserv-config.$(OBJEXT):  \
+	../shared/$(am__dirstamp) ../shared/$(DEPDIR)/$(am__dirstamp)
 
 ipvisualizer_flowserv$(EXEEXT): $(ipvisualizer_flowserv_OBJECTS) $(ipvisualizer_flowserv_DEPENDENCIES) $(EXTRA_ipvisualizer_flowserv_DEPENDENCIES) 
 	@rm -f ipvisualizer_flowserv$(EXEEXT)
-	$(AM_V_CCLD)$(LINK) $(ipvisualizer_flowserv_OBJECTS) $(ipvisualizer_flowserv_LDADD) $(LIBS)
+	$(AM_V_CCLD)$(ipvisualizer_flowserv_LINK) $(ipvisualizer_flowserv_OBJECTS) $(ipvisualizer_flowserv_LDADD) $(LIBS)
 
 mostlyclean-compile:
 	-rm -f *.$(OBJEXT)
+	-rm -f ../shared/*.$(OBJEXT)
 
 distclean-compile:
 	-rm -f *.tab.c
 
-@AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/config.Po@am__quote@
-@AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/flowdata.Po@am__quote@
-@AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/flowserv.Po@am__quote@
-@AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/fwrules.Po@am__quote@
-@AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/globals.Po@am__quote@
-@AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/sockutils.Po@am__quote@
-@AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/subnets.Po@am__quote@
+@AMDEP_TRUE@@am__include@ @am__quote@../shared/$(DEPDIR)/ipvisualizer_flowserv-config.Po@am__quote@
+@AMDEP_TRUE@@am__include@ @am__quote@../shared/$(DEPDIR)/ipvisualizer_flowserv-flowdata.Po@am__quote@
+@AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/ipvisualizer_flowserv-flowserv.Po@am__quote@
+@AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/ipvisualizer_flowserv-fwrules.Po@am__quote@
+@AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/ipvisualizer_flowserv-globals.Po@am__quote@
+@AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/ipvisualizer_flowserv-sockutils.Po@am__quote@
+@AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/ipvisualizer_flowserv-subnets.Po@am__quote@
 
 .c.o:
-@am__fastdepCC_TRUE@	$(AM_V_CC)$(COMPILE) -MT $@ -MD -MP -MF $(DEPDIR)/$*.Tpo -c -o $@ $<
-@am__fastdepCC_TRUE@	$(AM_V_at)$(am__mv) $(DEPDIR)/$*.Tpo $(DEPDIR)/$*.Po
+@am__fastdepCC_TRUE@	$(AM_V_CC)depbase=`echo $@ | sed 's|[^/]*$$|$(DEPDIR)/&|;s|\.o$$||'`;\
+@am__fastdepCC_TRUE@	$(COMPILE) -MT $@ -MD -MP -MF $$depbase.Tpo -c -o $@ $< &&\
+@am__fastdepCC_TRUE@	$(am__mv) $$depbase.Tpo $$depbase.Po
 @AMDEP_TRUE@@am__fastdepCC_FALSE@	$(AM_V_CC)source='$<' object='$@' libtool=no @AMDEPBACKSLASH@
 @AMDEP_TRUE@@am__fastdepCC_FALSE@	DEPDIR=$(DEPDIR) $(CCDEPMODE) $(depcomp) @AMDEPBACKSLASH@
 @am__fastdepCC_FALSE@	$(AM_V_CC@am__nodep@)$(COMPILE) -c -o $@ $<
 
 .c.obj:
-@am__fastdepCC_TRUE@	$(AM_V_CC)$(COMPILE) -MT $@ -MD -MP -MF $(DEPDIR)/$*.Tpo -c -o $@ `$(CYGPATH_W) '$<'`
-@am__fastdepCC_TRUE@	$(AM_V_at)$(am__mv) $(DEPDIR)/$*.Tpo $(DEPDIR)/$*.Po
+@am__fastdepCC_TRUE@	$(AM_V_CC)depbase=`echo $@ | sed 's|[^/]*$$|$(DEPDIR)/&|;s|\.obj$$||'`;\
+@am__fastdepCC_TRUE@	$(COMPILE) -MT $@ -MD -MP -MF $$depbase.Tpo -c -o $@ `$(CYGPATH_W) '$<'` &&\
+@am__fastdepCC_TRUE@	$(am__mv) $$depbase.Tpo $$depbase.Po
 @AMDEP_TRUE@@am__fastdepCC_FALSE@	$(AM_V_CC)source='$<' object='$@' libtool=no @AMDEPBACKSLASH@
 @AMDEP_TRUE@@am__fastdepCC_FALSE@	DEPDIR=$(DEPDIR) $(CCDEPMODE) $(depcomp) @AMDEPBACKSLASH@
 @am__fastdepCC_FALSE@	$(AM_V_CC@am__nodep@)$(COMPILE) -c -o $@ `$(CYGPATH_W) '$<'`
 
-flowdata.o: ../shared/flowdata.c
-@am__fastdepCC_TRUE@	$(AM_V_CC)$(CC) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(AM_CPPFLAGS) $(CPPFLAGS) $(AM_CFLAGS) $(CFLAGS) -MT flowdata.o -MD -MP -MF $(DEPDIR)/flowdata.Tpo -c -o flowdata.o `test -f '../shared/flowdata.c' || echo '$(srcdir)/'`../shared/flowdata.c
-@am__fastdepCC_TRUE@	$(AM_V_at)$(am__mv) $(DEPDIR)/flowdata.Tpo $(DEPDIR)/flowdata.Po
-@AMDEP_TRUE@@am__fastdepCC_FALSE@	$(AM_V_CC)source='../shared/flowdata.c' object='flowdata.o' libtool=no @AMDEPBACKSLASH@
+ipvisualizer_flowserv-flowserv.o: flowserv.c
+@am__fastdepCC_TRUE@	$(AM_V_CC)$(CC) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(AM_CPPFLAGS) $(CPPFLAGS) $(ipvisualizer_flowserv_CFLAGS) $(CFLAGS) -MT ipvisualizer_flowserv-flowserv.o -MD -MP -MF $(DEPDIR)/ipvisualizer_flowserv-flowserv.Tpo -c -o ipvisualizer_flowserv-flowserv.o `test -f 'flowserv.c' || echo '$(srcdir)/'`flowserv.c
+@am__fastdepCC_TRUE@	$(AM_V_at)$(am__mv) $(DEPDIR)/ipvisualizer_flowserv-flowserv.Tpo $(DEPDIR)/ipvisualizer_flowserv-flowserv.Po
+@AMDEP_TRUE@@am__fastdepCC_FALSE@	$(AM_V_CC)source='flowserv.c' object='ipvisualizer_flowserv-flowserv.o' libtool=no @AMDEPBACKSLASH@
 @AMDEP_TRUE@@am__fastdepCC_FALSE@	DEPDIR=$(DEPDIR) $(CCDEPMODE) $(depcomp) @AMDEPBACKSLASH@
-@am__fastdepCC_FALSE@	$(AM_V_CC@am__nodep@)$(CC) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(AM_CPPFLAGS) $(CPPFLAGS) $(AM_CFLAGS) $(CFLAGS) -c -o flowdata.o `test -f '../shared/flowdata.c' || echo '$(srcdir)/'`../shared/flowdata.c
+@am__fastdepCC_FALSE@	$(AM_V_CC@am__nodep@)$(CC) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(AM_CPPFLAGS) $(CPPFLAGS) $(ipvisualizer_flowserv_CFLAGS) $(CFLAGS) -c -o ipvisualizer_flowserv-flowserv.o `test -f 'flowserv.c' || echo '$(srcdir)/'`flowserv.c
 
-flowdata.obj: ../shared/flowdata.c
-@am__fastdepCC_TRUE@	$(AM_V_CC)$(CC) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(AM_CPPFLAGS) $(CPPFLAGS) $(AM_CFLAGS) $(CFLAGS) -MT flowdata.obj -MD -MP -MF $(DEPDIR)/flowdata.Tpo -c -o flowdata.obj `if test -f '../shared/flowdata.c'; then $(CYGPATH_W) '../shared/flowdata.c'; else $(CYGPATH_W) '$(srcdir)/../shared/flowdata.c'; fi`
-@am__fastdepCC_TRUE@	$(AM_V_at)$(am__mv) $(DEPDIR)/flowdata.Tpo $(DEPDIR)/flowdata.Po
-@AMDEP_TRUE@@am__fastdepCC_FALSE@	$(AM_V_CC)source='../shared/flowdata.c' object='flowdata.obj' libtool=no @AMDEPBACKSLASH@
+ipvisualizer_flowserv-flowserv.obj: flowserv.c
+@am__fastdepCC_TRUE@	$(AM_V_CC)$(CC) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(AM_CPPFLAGS) $(CPPFLAGS) $(ipvisualizer_flowserv_CFLAGS) $(CFLAGS) -MT ipvisualizer_flowserv-flowserv.obj -MD -MP -MF $(DEPDIR)/ipvisualizer_flowserv-flowserv.Tpo -c -o ipvisualizer_flowserv-flowserv.obj `if test -f 'flowserv.c'; then $(CYGPATH_W) 'flowserv.c'; else $(CYGPATH_W) '$(srcdir)/flowserv.c'; fi`
+@am__fastdepCC_TRUE@	$(AM_V_at)$(am__mv) $(DEPDIR)/ipvisualizer_flowserv-flowserv.Tpo $(DEPDIR)/ipvisualizer_flowserv-flowserv.Po
+@AMDEP_TRUE@@am__fastdepCC_FALSE@	$(AM_V_CC)source='flowserv.c' object='ipvisualizer_flowserv-flowserv.obj' libtool=no @AMDEPBACKSLASH@
 @AMDEP_TRUE@@am__fastdepCC_FALSE@	DEPDIR=$(DEPDIR) $(CCDEPMODE) $(depcomp) @AMDEPBACKSLASH@
-@am__fastdepCC_FALSE@	$(AM_V_CC@am__nodep@)$(CC) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(AM_CPPFLAGS) $(CPPFLAGS) $(AM_CFLAGS) $(CFLAGS) -c -o flowdata.obj `if test -f '../shared/flowdata.c'; then $(CYGPATH_W) '../shared/flowdata.c'; else $(CYGPATH_W) '$(srcdir)/../shared/flowdata.c'; fi`
+@am__fastdepCC_FALSE@	$(AM_V_CC@am__nodep@)$(CC) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(AM_CPPFLAGS) $(CPPFLAGS) $(ipvisualizer_flowserv_CFLAGS) $(CFLAGS) -c -o ipvisualizer_flowserv-flowserv.obj `if test -f 'flowserv.c'; then $(CYGPATH_W) 'flowserv.c'; else $(CYGPATH_W) '$(srcdir)/flowserv.c'; fi`
 
-config.o: ../shared/config.c
-@am__fastdepCC_TRUE@	$(AM_V_CC)$(CC) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(AM_CPPFLAGS) $(CPPFLAGS) $(AM_CFLAGS) $(CFLAGS) -MT config.o -MD -MP -MF $(DEPDIR)/config.Tpo -c -o config.o `test -f '../shared/config.c' || echo '$(srcdir)/'`../shared/config.c
-@am__fastdepCC_TRUE@	$(AM_V_at)$(am__mv) $(DEPDIR)/config.Tpo $(DEPDIR)/config.Po
-@AMDEP_TRUE@@am__fastdepCC_FALSE@	$(AM_V_CC)source='../shared/config.c' object='config.o' libtool=no @AMDEPBACKSLASH@
+ipvisualizer_flowserv-fwrules.o: fwrules.c
+@am__fastdepCC_TRUE@	$(AM_V_CC)$(CC) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(AM_CPPFLAGS) $(CPPFLAGS) $(ipvisualizer_flowserv_CFLAGS) $(CFLAGS) -MT ipvisualizer_flowserv-fwrules.o -MD -MP -MF $(DEPDIR)/ipvisualizer_flowserv-fwrules.Tpo -c -o ipvisualizer_flowserv-fwrules.o `test -f 'fwrules.c' || echo '$(srcdir)/'`fwrules.c
+@am__fastdepCC_TRUE@	$(AM_V_at)$(am__mv) $(DEPDIR)/ipvisualizer_flowserv-fwrules.Tpo $(DEPDIR)/ipvisualizer_flowserv-fwrules.Po
+@AMDEP_TRUE@@am__fastdepCC_FALSE@	$(AM_V_CC)source='fwrules.c' object='ipvisualizer_flowserv-fwrules.o' libtool=no @AMDEPBACKSLASH@
 @AMDEP_TRUE@@am__fastdepCC_FALSE@	DEPDIR=$(DEPDIR) $(CCDEPMODE) $(depcomp) @AMDEPBACKSLASH@
-@am__fastdepCC_FALSE@	$(AM_V_CC@am__nodep@)$(CC) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(AM_CPPFLAGS) $(CPPFLAGS) $(AM_CFLAGS) $(CFLAGS) -c -o config.o `test -f '../shared/config.c' || echo '$(srcdir)/'`../shared/config.c
+@am__fastdepCC_FALSE@	$(AM_V_CC@am__nodep@)$(CC) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(AM_CPPFLAGS) $(CPPFLAGS) $(ipvisualizer_flowserv_CFLAGS) $(CFLAGS) -c -o ipvisualizer_flowserv-fwrules.o `test -f 'fwrules.c' || echo '$(srcdir)/'`fwrules.c
 
-config.obj: ../shared/config.c
-@am__fastdepCC_TRUE@	$(AM_V_CC)$(CC) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(AM_CPPFLAGS) $(CPPFLAGS) $(AM_CFLAGS) $(CFLAGS) -MT config.obj -MD -MP -MF $(DEPDIR)/config.Tpo -c -o config.obj `if test -f '../shared/config.c'; then $(CYGPATH_W) '../shared/config.c'; else $(CYGPATH_W) '$(srcdir)/../shared/config.c'; fi`
-@am__fastdepCC_TRUE@	$(AM_V_at)$(am__mv) $(DEPDIR)/config.Tpo $(DEPDIR)/config.Po
-@AMDEP_TRUE@@am__fastdepCC_FALSE@	$(AM_V_CC)source='../shared/config.c' object='config.obj' libtool=no @AMDEPBACKSLASH@
+ipvisualizer_flowserv-fwrules.obj: fwrules.c
+@am__fastdepCC_TRUE@	$(AM_V_CC)$(CC) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(AM_CPPFLAGS) $(CPPFLAGS) $(ipvisualizer_flowserv_CFLAGS) $(CFLAGS) -MT ipvisualizer_flowserv-fwrules.obj -MD -MP -MF $(DEPDIR)/ipvisualizer_flowserv-fwrules.Tpo -c -o ipvisualizer_flowserv-fwrules.obj `if test -f 'fwrules.c'; then $(CYGPATH_W) 'fwrules.c'; else $(CYGPATH_W) '$(srcdir)/fwrules.c'; fi`
+@am__fastdepCC_TRUE@	$(AM_V_at)$(am__mv) $(DEPDIR)/ipvisualizer_flowserv-fwrules.Tpo $(DEPDIR)/ipvisualizer_flowserv-fwrules.Po
+@AMDEP_TRUE@@am__fastdepCC_FALSE@	$(AM_V_CC)source='fwrules.c' object='ipvisualizer_flowserv-fwrules.obj' libtool=no @AMDEPBACKSLASH@
 @AMDEP_TRUE@@am__fastdepCC_FALSE@	DEPDIR=$(DEPDIR) $(CCDEPMODE) $(depcomp) @AMDEPBACKSLASH@
-@am__fastdepCC_FALSE@	$(AM_V_CC@am__nodep@)$(CC) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(AM_CPPFLAGS) $(CPPFLAGS) $(AM_CFLAGS) $(CFLAGS) -c -o config.obj `if test -f '../shared/config.c'; then $(CYGPATH_W) '../shared/config.c'; else $(CYGPATH_W) '$(srcdir)/../shared/config.c'; fi`
+@am__fastdepCC_FALSE@	$(AM_V_CC@am__nodep@)$(CC) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(AM_CPPFLAGS) $(CPPFLAGS) $(ipvisualizer_flowserv_CFLAGS) $(CFLAGS) -c -o ipvisualizer_flowserv-fwrules.obj `if test -f 'fwrules.c'; then $(CYGPATH_W) 'fwrules.c'; else $(CYGPATH_W) '$(srcdir)/fwrules.c'; fi`
+
+ipvisualizer_flowserv-globals.o: globals.c
+@am__fastdepCC_TRUE@	$(AM_V_CC)$(CC) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(AM_CPPFLAGS) $(CPPFLAGS) $(ipvisualizer_flowserv_CFLAGS) $(CFLAGS) -MT ipvisualizer_flowserv-globals.o -MD -MP -MF $(DEPDIR)/ipvisualizer_flowserv-globals.Tpo -c -o ipvisualizer_flowserv-globals.o `test -f 'globals.c' || echo '$(srcdir)/'`globals.c
+@am__fastdepCC_TRUE@	$(AM_V_at)$(am__mv) $(DEPDIR)/ipvisualizer_flowserv-globals.Tpo $(DEPDIR)/ipvisualizer_flowserv-globals.Po
+@AMDEP_TRUE@@am__fastdepCC_FALSE@	$(AM_V_CC)source='globals.c' object='ipvisualizer_flowserv-globals.o' libtool=no @AMDEPBACKSLASH@
+@AMDEP_TRUE@@am__fastdepCC_FALSE@	DEPDIR=$(DEPDIR) $(CCDEPMODE) $(depcomp) @AMDEPBACKSLASH@
+@am__fastdepCC_FALSE@	$(AM_V_CC@am__nodep@)$(CC) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(AM_CPPFLAGS) $(CPPFLAGS) $(ipvisualizer_flowserv_CFLAGS) $(CFLAGS) -c -o ipvisualizer_flowserv-globals.o `test -f 'globals.c' || echo '$(srcdir)/'`globals.c
+
+ipvisualizer_flowserv-globals.obj: globals.c
+@am__fastdepCC_TRUE@	$(AM_V_CC)$(CC) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(AM_CPPFLAGS) $(CPPFLAGS) $(ipvisualizer_flowserv_CFLAGS) $(CFLAGS) -MT ipvisualizer_flowserv-globals.obj -MD -MP -MF $(DEPDIR)/ipvisualizer_flowserv-globals.Tpo -c -o ipvisualizer_flowserv-globals.obj `if test -f 'globals.c'; then $(CYGPATH_W) 'globals.c'; else $(CYGPATH_W) '$(srcdir)/globals.c'; fi`
+@am__fastdepCC_TRUE@	$(AM_V_at)$(am__mv) $(DEPDIR)/ipvisualizer_flowserv-globals.Tpo $(DEPDIR)/ipvisualizer_flowserv-globals.Po
+@AMDEP_TRUE@@am__fastdepCC_FALSE@	$(AM_V_CC)source='globals.c' object='ipvisualizer_flowserv-globals.obj' libtool=no @AMDEPBACKSLASH@
+@AMDEP_TRUE@@am__fastdepCC_FALSE@	DEPDIR=$(DEPDIR) $(CCDEPMODE) $(depcomp) @AMDEPBACKSLASH@
+@am__fastdepCC_FALSE@	$(AM_V_CC@am__nodep@)$(CC) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(AM_CPPFLAGS) $(CPPFLAGS) $(ipvisualizer_flowserv_CFLAGS) $(CFLAGS) -c -o ipvisualizer_flowserv-globals.obj `if test -f 'globals.c'; then $(CYGPATH_W) 'globals.c'; else $(CYGPATH_W) '$(srcdir)/globals.c'; fi`
+
+ipvisualizer_flowserv-sockutils.o: sockutils.c
+@am__fastdepCC_TRUE@	$(AM_V_CC)$(CC) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(AM_CPPFLAGS) $(CPPFLAGS) $(ipvisualizer_flowserv_CFLAGS) $(CFLAGS) -MT ipvisualizer_flowserv-sockutils.o -MD -MP -MF $(DEPDIR)/ipvisualizer_flowserv-sockutils.Tpo -c -o ipvisualizer_flowserv-sockutils.o `test -f 'sockutils.c' || echo '$(srcdir)/'`sockutils.c
+@am__fastdepCC_TRUE@	$(AM_V_at)$(am__mv) $(DEPDIR)/ipvisualizer_flowserv-sockutils.Tpo $(DEPDIR)/ipvisualizer_flowserv-sockutils.Po
+@AMDEP_TRUE@@am__fastdepCC_FALSE@	$(AM_V_CC)source='sockutils.c' object='ipvisualizer_flowserv-sockutils.o' libtool=no @AMDEPBACKSLASH@
+@AMDEP_TRUE@@am__fastdepCC_FALSE@	DEPDIR=$(DEPDIR) $(CCDEPMODE) $(depcomp) @AMDEPBACKSLASH@
+@am__fastdepCC_FALSE@	$(AM_V_CC@am__nodep@)$(CC) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(AM_CPPFLAGS) $(CPPFLAGS) $(ipvisualizer_flowserv_CFLAGS) $(CFLAGS) -c -o ipvisualizer_flowserv-sockutils.o `test -f 'sockutils.c' || echo '$(srcdir)/'`sockutils.c
+
+ipvisualizer_flowserv-sockutils.obj: sockutils.c
+@am__fastdepCC_TRUE@	$(AM_V_CC)$(CC) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(AM_CPPFLAGS) $(CPPFLAGS) $(ipvisualizer_flowserv_CFLAGS) $(CFLAGS) -MT ipvisualizer_flowserv-sockutils.obj -MD -MP -MF $(DEPDIR)/ipvisualizer_flowserv-sockutils.Tpo -c -o ipvisualizer_flowserv-sockutils.obj `if test -f 'sockutils.c'; then $(CYGPATH_W) 'sockutils.c'; else $(CYGPATH_W) '$(srcdir)/sockutils.c'; fi`
+@am__fastdepCC_TRUE@	$(AM_V_at)$(am__mv) $(DEPDIR)/ipvisualizer_flowserv-sockutils.Tpo $(DEPDIR)/ipvisualizer_flowserv-sockutils.Po
+@AMDEP_TRUE@@am__fastdepCC_FALSE@	$(AM_V_CC)source='sockutils.c' object='ipvisualizer_flowserv-sockutils.obj' libtool=no @AMDEPBACKSLASH@
+@AMDEP_TRUE@@am__fastdepCC_FALSE@	DEPDIR=$(DEPDIR) $(CCDEPMODE) $(depcomp) @AMDEPBACKSLASH@
+@am__fastdepCC_FALSE@	$(AM_V_CC@am__nodep@)$(CC) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(AM_CPPFLAGS) $(CPPFLAGS) $(ipvisualizer_flowserv_CFLAGS) $(CFLAGS) -c -o ipvisualizer_flowserv-sockutils.obj `if test -f 'sockutils.c'; then $(CYGPATH_W) 'sockutils.c'; else $(CYGPATH_W) '$(srcdir)/sockutils.c'; fi`
+
+ipvisualizer_flowserv-subnets.o: subnets.c
+@am__fastdepCC_TRUE@	$(AM_V_CC)$(CC) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(AM_CPPFLAGS) $(CPPFLAGS) $(ipvisualizer_flowserv_CFLAGS) $(CFLAGS) -MT ipvisualizer_flowserv-subnets.o -MD -MP -MF $(DEPDIR)/ipvisualizer_flowserv-subnets.Tpo -c -o ipvisualizer_flowserv-subnets.o `test -f 'subnets.c' || echo '$(srcdir)/'`subnets.c
+@am__fastdepCC_TRUE@	$(AM_V_at)$(am__mv) $(DEPDIR)/ipvisualizer_flowserv-subnets.Tpo $(DEPDIR)/ipvisualizer_flowserv-subnets.Po
+@AMDEP_TRUE@@am__fastdepCC_FALSE@	$(AM_V_CC)source='subnets.c' object='ipvisualizer_flowserv-subnets.o' libtool=no @AMDEPBACKSLASH@
+@AMDEP_TRUE@@am__fastdepCC_FALSE@	DEPDIR=$(DEPDIR) $(CCDEPMODE) $(depcomp) @AMDEPBACKSLASH@
+@am__fastdepCC_FALSE@	$(AM_V_CC@am__nodep@)$(CC) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(AM_CPPFLAGS) $(CPPFLAGS) $(ipvisualizer_flowserv_CFLAGS) $(CFLAGS) -c -o ipvisualizer_flowserv-subnets.o `test -f 'subnets.c' || echo '$(srcdir)/'`subnets.c
+
+ipvisualizer_flowserv-subnets.obj: subnets.c
+@am__fastdepCC_TRUE@	$(AM_V_CC)$(CC) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(AM_CPPFLAGS) $(CPPFLAGS) $(ipvisualizer_flowserv_CFLAGS) $(CFLAGS) -MT ipvisualizer_flowserv-subnets.obj -MD -MP -MF $(DEPDIR)/ipvisualizer_flowserv-subnets.Tpo -c -o ipvisualizer_flowserv-subnets.obj `if test -f 'subnets.c'; then $(CYGPATH_W) 'subnets.c'; else $(CYGPATH_W) '$(srcdir)/subnets.c'; fi`
+@am__fastdepCC_TRUE@	$(AM_V_at)$(am__mv) $(DEPDIR)/ipvisualizer_flowserv-subnets.Tpo $(DEPDIR)/ipvisualizer_flowserv-subnets.Po
+@AMDEP_TRUE@@am__fastdepCC_FALSE@	$(AM_V_CC)source='subnets.c' object='ipvisualizer_flowserv-subnets.obj' libtool=no @AMDEPBACKSLASH@
+@AMDEP_TRUE@@am__fastdepCC_FALSE@	DEPDIR=$(DEPDIR) $(CCDEPMODE) $(depcomp) @AMDEPBACKSLASH@
+@am__fastdepCC_FALSE@	$(AM_V_CC@am__nodep@)$(CC) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(AM_CPPFLAGS) $(CPPFLAGS) $(ipvisualizer_flowserv_CFLAGS) $(CFLAGS) -c -o ipvisualizer_flowserv-subnets.obj `if test -f 'subnets.c'; then $(CYGPATH_W) 'subnets.c'; else $(CYGPATH_W) '$(srcdir)/subnets.c'; fi`
+
+../shared/ipvisualizer_flowserv-flowdata.o: ../shared/flowdata.c
+@am__fastdepCC_TRUE@	$(AM_V_CC)$(CC) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(AM_CPPFLAGS) $(CPPFLAGS) $(ipvisualizer_flowserv_CFLAGS) $(CFLAGS) -MT ../shared/ipvisualizer_flowserv-flowdata.o -MD -MP -MF ../shared/$(DEPDIR)/ipvisualizer_flowserv-flowdata.Tpo -c -o ../shared/ipvisualizer_flowserv-flowdata.o `test -f '../shared/flowdata.c' || echo '$(srcdir)/'`../shared/flowdata.c
+@am__fastdepCC_TRUE@	$(AM_V_at)$(am__mv) ../shared/$(DEPDIR)/ipvisualizer_flowserv-flowdata.Tpo ../shared/$(DEPDIR)/ipvisualizer_flowserv-flowdata.Po
+@AMDEP_TRUE@@am__fastdepCC_FALSE@	$(AM_V_CC)source='../shared/flowdata.c' object='../shared/ipvisualizer_flowserv-flowdata.o' libtool=no @AMDEPBACKSLASH@
+@AMDEP_TRUE@@am__fastdepCC_FALSE@	DEPDIR=$(DEPDIR) $(CCDEPMODE) $(depcomp) @AMDEPBACKSLASH@
+@am__fastdepCC_FALSE@	$(AM_V_CC@am__nodep@)$(CC) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(AM_CPPFLAGS) $(CPPFLAGS) $(ipvisualizer_flowserv_CFLAGS) $(CFLAGS) -c -o ../shared/ipvisualizer_flowserv-flowdata.o `test -f '../shared/flowdata.c' || echo '$(srcdir)/'`../shared/flowdata.c
+
+../shared/ipvisualizer_flowserv-flowdata.obj: ../shared/flowdata.c
+@am__fastdepCC_TRUE@	$(AM_V_CC)$(CC) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(AM_CPPFLAGS) $(CPPFLAGS) $(ipvisualizer_flowserv_CFLAGS) $(CFLAGS) -MT ../shared/ipvisualizer_flowserv-flowdata.obj -MD -MP -MF ../shared/$(DEPDIR)/ipvisualizer_flowserv-flowdata.Tpo -c -o ../shared/ipvisualizer_flowserv-flowdata.obj `if test -f '../shared/flowdata.c'; then $(CYGPATH_W) '../shared/flowdata.c'; else $(CYGPATH_W) '$(srcdir)/../shared/flowdata.c'; fi`
+@am__fastdepCC_TRUE@	$(AM_V_at)$(am__mv) ../shared/$(DEPDIR)/ipvisualizer_flowserv-flowdata.Tpo ../shared/$(DEPDIR)/ipvisualizer_flowserv-flowdata.Po
+@AMDEP_TRUE@@am__fastdepCC_FALSE@	$(AM_V_CC)source='../shared/flowdata.c' object='../shared/ipvisualizer_flowserv-flowdata.obj' libtool=no @AMDEPBACKSLASH@
+@AMDEP_TRUE@@am__fastdepCC_FALSE@	DEPDIR=$(DEPDIR) $(CCDEPMODE) $(depcomp) @AMDEPBACKSLASH@
+@am__fastdepCC_FALSE@	$(AM_V_CC@am__nodep@)$(CC) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(AM_CPPFLAGS) $(CPPFLAGS) $(ipvisualizer_flowserv_CFLAGS) $(CFLAGS) -c -o ../shared/ipvisualizer_flowserv-flowdata.obj `if test -f '../shared/flowdata.c'; then $(CYGPATH_W) '../shared/flowdata.c'; else $(CYGPATH_W) '$(srcdir)/../shared/flowdata.c'; fi`
+
+../shared/ipvisualizer_flowserv-config.o: ../shared/config.c
+@am__fastdepCC_TRUE@	$(AM_V_CC)$(CC) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(AM_CPPFLAGS) $(CPPFLAGS) $(ipvisualizer_flowserv_CFLAGS) $(CFLAGS) -MT ../shared/ipvisualizer_flowserv-config.o -MD -MP -MF ../shared/$(DEPDIR)/ipvisualizer_flowserv-config.Tpo -c -o ../shared/ipvisualizer_flowserv-config.o `test -f '../shared/config.c' || echo '$(srcdir)/'`../shared/config.c
+@am__fastdepCC_TRUE@	$(AM_V_at)$(am__mv) ../shared/$(DEPDIR)/ipvisualizer_flowserv-config.Tpo ../shared/$(DEPDIR)/ipvisualizer_flowserv-config.Po
+@AMDEP_TRUE@@am__fastdepCC_FALSE@	$(AM_V_CC)source='../shared/config.c' object='../shared/ipvisualizer_flowserv-config.o' libtool=no @AMDEPBACKSLASH@
+@AMDEP_TRUE@@am__fastdepCC_FALSE@	DEPDIR=$(DEPDIR) $(CCDEPMODE) $(depcomp) @AMDEPBACKSLASH@
+@am__fastdepCC_FALSE@	$(AM_V_CC@am__nodep@)$(CC) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(AM_CPPFLAGS) $(CPPFLAGS) $(ipvisualizer_flowserv_CFLAGS) $(CFLAGS) -c -o ../shared/ipvisualizer_flowserv-config.o `test -f '../shared/config.c' || echo '$(srcdir)/'`../shared/config.c
+
+../shared/ipvisualizer_flowserv-config.obj: ../shared/config.c
+@am__fastdepCC_TRUE@	$(AM_V_CC)$(CC) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(AM_CPPFLAGS) $(CPPFLAGS) $(ipvisualizer_flowserv_CFLAGS) $(CFLAGS) -MT ../shared/ipvisualizer_flowserv-config.obj -MD -MP -MF ../shared/$(DEPDIR)/ipvisualizer_flowserv-config.Tpo -c -o ../shared/ipvisualizer_flowserv-config.obj `if test -f '../shared/config.c'; then $(CYGPATH_W) '../shared/config.c'; else $(CYGPATH_W) '$(srcdir)/../shared/config.c'; fi`
+@am__fastdepCC_TRUE@	$(AM_V_at)$(am__mv) ../shared/$(DEPDIR)/ipvisualizer_flowserv-config.Tpo ../shared/$(DEPDIR)/ipvisualizer_flowserv-config.Po
+@AMDEP_TRUE@@am__fastdepCC_FALSE@	$(AM_V_CC)source='../shared/config.c' object='../shared/ipvisualizer_flowserv-config.obj' libtool=no @AMDEPBACKSLASH@
+@AMDEP_TRUE@@am__fastdepCC_FALSE@	DEPDIR=$(DEPDIR) $(CCDEPMODE) $(depcomp) @AMDEPBACKSLASH@
+@am__fastdepCC_FALSE@	$(AM_V_CC@am__nodep@)$(CC) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(AM_CPPFLAGS) $(CPPFLAGS) $(ipvisualizer_flowserv_CFLAGS) $(CFLAGS) -c -o ../shared/ipvisualizer_flowserv-config.obj `if test -f '../shared/config.c'; then $(CYGPATH_W) '../shared/config.c'; else $(CYGPATH_W) '$(srcdir)/../shared/config.c'; fi`
 
 ID: $(am__tagged_files)
 	$(am__define_uniq_tagged_files); mkid -fID $$unique
@@ -497,6 +593,8 @@ clean-generic:
 distclean-generic:
 	-test -z "$(CONFIG_CLEAN_FILES)" || rm -f $(CONFIG_CLEAN_FILES)
 	-test . = "$(srcdir)" || test -z "$(CONFIG_CLEAN_VPATH_FILES)" || rm -f $(CONFIG_CLEAN_VPATH_FILES)
+	-rm -f ../shared/$(DEPDIR)/$(am__dirstamp)
+	-rm -f ../shared/$(am__dirstamp)
 
 maintainer-clean-generic:
 	@echo "This command is intended for maintainers to use"
@@ -507,7 +605,7 @@ clean-am: clean-generic clean-ipvisualizer_flowservprgPROGRAMS \
 	mostlyclean-am
 
 distclean: distclean-am
-	-rm -rf ./$(DEPDIR)
+	-rm -rf ../shared/$(DEPDIR) ./$(DEPDIR)
 	-rm -f Makefile
 distclean-am: clean-am distclean-compile distclean-generic \
 	distclean-tags
@@ -553,7 +651,7 @@ install-ps-am:
 installcheck-am:
 
 maintainer-clean: maintainer-clean-am
-	-rm -rf ./$(DEPDIR)
+	-rm -rf ../shared/$(DEPDIR) ./$(DEPDIR)
 	-rm -f Makefile
 maintainer-clean-am: distclean-am maintainer-clean-generic
 

@@ -1,6 +1,8 @@
 #                                               -*- Autoconf -*-
 # Process this file with autoconf to produce a configure script.
 
+AUTOMAKE_OPTIONS=subdir-objects
+
 AC_PREREQ(2.61)
 AC_INIT(IPVISUALIZER, 0.4.2, esk-ipvisualizer@esk.cs.usu.edu)
 AM_INIT_AUTOMAKE
@@ -22,6 +24,9 @@ AC_CHECK_LIB([GL], [glEnable])
 AC_CHECK_LIB([GLU], [gluOrtho2D])
 AC_CHECK_LIB([SDL], [SDL_Init])
 
+AC_CHECK_LIB([curl], [curl])
+LIBCURL_CHECK_CONFIG()
+
 AS_IF([test "x$enable_ffmpeg" == "xyes"], [
 	AC_DEFINE(USE_FFMPEG, 1, [Set to 1 to enable creating videos])
 	AC_CHECK_LIB([avcodec], [avcodec_open])
@@ -36,7 +41,9 @@ AS_IF([test "x$enable_ffmpeg" == "xyes"], [
 	fi
 ])
 
-AC_CHECK_LIB([pcap], [pcap_open_live])
+AC_CHECK_LIB([pcap], [pcap_create])
+AC_CHECK_HEADERS([pcap/pcap.h])
+
 AC_CHECK_LIB([pthread], [pthread_create])
 
 if test "$ac_cv_lib_SDL_main" == no

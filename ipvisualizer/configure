@@ -629,6 +629,9 @@ LIBOBJS
 EGREP
 GREP
 CPP
+LIBCURL
+LIBCURL_CPPFLAGS
+_libcurl_config
 am__fastdepCC_FALSE
 am__fastdepCC_TRUE
 CCDEPMODE
@@ -721,6 +724,7 @@ enable_silent_rules
 enable_ffmpeg
 enable_maintainer_mode
 enable_dependency_tracking
+with_libcurl
 '
       ac_precious_vars='build_alias
 host_alias
@@ -1358,6 +1362,12 @@ Optional Features:
   --disable-dependency-tracking
                           speeds up one-time build
 
+Optional Packages:
+  --with-PACKAGE[=ARG]    use PACKAGE [ARG=yes]
+  --without-PACKAGE       do not use PACKAGE (same as --with-PACKAGE=no)
+  --with-libcurl=PREFIX   look for the curl library in PREFIX/lib and headers
+                          in PREFIX/include
+
 Some influential environment variables:
   CC          C compiler command
   CFLAGS      C compiler flags
@@ -1532,6 +1542,73 @@ fi
 
 } # ac_fn_c_try_link
 
+# ac_fn_c_check_func LINENO FUNC VAR
+# ----------------------------------
+# Tests whether FUNC exists, setting the cache variable VAR accordingly
+ac_fn_c_check_func ()
+{
+  as_lineno=${as_lineno-"$1"} as_lineno_stack=as_lineno_stack=$as_lineno_stack
+  { $as_echo "$as_me:${as_lineno-$LINENO}: checking for $2" >&5
+$as_echo_n "checking for $2... " >&6; }
+if eval \${$3+:} false; then :
+  $as_echo_n "(cached) " >&6
+else
+  cat confdefs.h - <<_ACEOF >conftest.$ac_ext
+/* end confdefs.h.  */
+/* Define $2 to an innocuous variant, in case <limits.h> declares $2.
+   For example, HP-UX 11i <limits.h> declares gettimeofday.  */
+#define $2 innocuous_$2
+
+/* System header to define __stub macros and hopefully few prototypes,
+    which can conflict with char $2 (); below.
+    Prefer <limits.h> to <assert.h> if __STDC__ is defined, since
+    <limits.h> exists even on freestanding compilers.  */
+
+#ifdef __STDC__
+# include <limits.h>
+#else
+# include <assert.h>
+#endif
+
+#undef $2
+
+/* Override any GCC internal prototype to avoid an error.
+   Use char because int might match the return type of a GCC
+   builtin and then its argument prototype would still apply.  */
+#ifdef __cplusplus
+extern "C"
+#endif
+char $2 ();
+/* The GNU C library defines this for functions which it implements
+    to always fail with ENOSYS.  Some functions are actually named
+    something starting with __ and the normal name is an alias.  */
+#if defined __stub_$2 || defined __stub___$2
+choke me
+#endif
+
+int
+main ()
+{
+return $2 ();
+  ;
+  return 0;
+}
+_ACEOF
+if ac_fn_c_try_link "$LINENO"; then :
+  eval "$3=yes"
+else
+  eval "$3=no"
+fi
+rm -f core conftest.err conftest.$ac_objext \
+    conftest$ac_exeext conftest.$ac_ext
+fi
+eval ac_res=\$$3
+	       { $as_echo "$as_me:${as_lineno-$LINENO}: result: $ac_res" >&5
+$as_echo "$ac_res" >&6; }
+  eval $as_lineno_stack; ${as_lineno_stack:+:} unset as_lineno
+
+} # ac_fn_c_check_func
+
 # ac_fn_c_try_cpp LINENO
 # ----------------------
 # Try to preprocess conftest.$ac_ext, and return whether this succeeded.
@@ -1568,48 +1645,6 @@ fi
   as_fn_set_status $ac_retval
 
 } # ac_fn_c_try_cpp
-
-# ac_fn_c_try_run LINENO
-# ----------------------
-# Try to link conftest.$ac_ext, and return whether this succeeded. Assumes
-# that executables *can* be run.
-ac_fn_c_try_run ()
-{
-  as_lineno=${as_lineno-"$1"} as_lineno_stack=as_lineno_stack=$as_lineno_stack
-  if { { ac_try="$ac_link"
-case "(($ac_try" in
-  *\"* | *\`* | *\\*) ac_try_echo=\$ac_try;;
-  *) ac_try_echo=$ac_try;;
-esac
-eval ac_try_echo="\"\$as_me:${as_lineno-$LINENO}: $ac_try_echo\""
-$as_echo "$ac_try_echo"; } >&5
-  (eval "$ac_link") 2>&5
-  ac_status=$?
-  $as_echo "$as_me:${as_lineno-$LINENO}: \$? = $ac_status" >&5
-  test $ac_status = 0; } && { ac_try='./conftest$ac_exeext'
-  { { case "(($ac_try" in
-  *\"* | *\`* | *\\*) ac_try_echo=\$ac_try;;
-  *) ac_try_echo=$ac_try;;
-esac
-eval ac_try_echo="\"\$as_me:${as_lineno-$LINENO}: $ac_try_echo\""
-$as_echo "$ac_try_echo"; } >&5
-  (eval "$ac_try") 2>&5
-  ac_status=$?
-  $as_echo "$as_me:${as_lineno-$LINENO}: \$? = $ac_status" >&5
-  test $ac_status = 0; }; }; then :
-  ac_retval=0
-else
-  $as_echo "$as_me: program exited with status $ac_status" >&5
-       $as_echo "$as_me: failed program was:" >&5
-sed 's/^/| /' conftest.$ac_ext >&5
-
-       ac_retval=$ac_status
-fi
-  rm -rf conftest.dSYM conftest_ipa8_conftest.oo
-  eval $as_lineno_stack; ${as_lineno_stack:+:} unset as_lineno
-  as_fn_set_status $ac_retval
-
-} # ac_fn_c_try_run
 
 # ac_fn_c_check_header_mongrel LINENO HEADER VAR INCLUDES
 # -------------------------------------------------------
@@ -1701,6 +1736,48 @@ fi
   eval $as_lineno_stack; ${as_lineno_stack:+:} unset as_lineno
 
 } # ac_fn_c_check_header_mongrel
+
+# ac_fn_c_try_run LINENO
+# ----------------------
+# Try to link conftest.$ac_ext, and return whether this succeeded. Assumes
+# that executables *can* be run.
+ac_fn_c_try_run ()
+{
+  as_lineno=${as_lineno-"$1"} as_lineno_stack=as_lineno_stack=$as_lineno_stack
+  if { { ac_try="$ac_link"
+case "(($ac_try" in
+  *\"* | *\`* | *\\*) ac_try_echo=\$ac_try;;
+  *) ac_try_echo=$ac_try;;
+esac
+eval ac_try_echo="\"\$as_me:${as_lineno-$LINENO}: $ac_try_echo\""
+$as_echo "$ac_try_echo"; } >&5
+  (eval "$ac_link") 2>&5
+  ac_status=$?
+  $as_echo "$as_me:${as_lineno-$LINENO}: \$? = $ac_status" >&5
+  test $ac_status = 0; } && { ac_try='./conftest$ac_exeext'
+  { { case "(($ac_try" in
+  *\"* | *\`* | *\\*) ac_try_echo=\$ac_try;;
+  *) ac_try_echo=$ac_try;;
+esac
+eval ac_try_echo="\"\$as_me:${as_lineno-$LINENO}: $ac_try_echo\""
+$as_echo "$ac_try_echo"; } >&5
+  (eval "$ac_try") 2>&5
+  ac_status=$?
+  $as_echo "$as_me:${as_lineno-$LINENO}: \$? = $ac_status" >&5
+  test $ac_status = 0; }; }; then :
+  ac_retval=0
+else
+  $as_echo "$as_me: program exited with status $ac_status" >&5
+       $as_echo "$as_me: failed program was:" >&5
+sed 's/^/| /' conftest.$ac_ext >&5
+
+       ac_retval=$ac_status
+fi
+  rm -rf conftest.dSYM conftest_ipa8_conftest.oo
+  eval $as_lineno_stack; ${as_lineno_stack:+:} unset as_lineno
+  as_fn_set_status $ac_retval
+
+} # ac_fn_c_try_run
 
 # ac_fn_c_check_header_compile LINENO HEADER VAR INCLUDES
 # -------------------------------------------------------
@@ -1840,73 +1917,6 @@ $as_echo "$ac_res" >&6; }
   eval $as_lineno_stack; ${as_lineno_stack:+:} unset as_lineno
 
 } # ac_fn_c_find_uintX_t
-
-# ac_fn_c_check_func LINENO FUNC VAR
-# ----------------------------------
-# Tests whether FUNC exists, setting the cache variable VAR accordingly
-ac_fn_c_check_func ()
-{
-  as_lineno=${as_lineno-"$1"} as_lineno_stack=as_lineno_stack=$as_lineno_stack
-  { $as_echo "$as_me:${as_lineno-$LINENO}: checking for $2" >&5
-$as_echo_n "checking for $2... " >&6; }
-if eval \${$3+:} false; then :
-  $as_echo_n "(cached) " >&6
-else
-  cat confdefs.h - <<_ACEOF >conftest.$ac_ext
-/* end confdefs.h.  */
-/* Define $2 to an innocuous variant, in case <limits.h> declares $2.
-   For example, HP-UX 11i <limits.h> declares gettimeofday.  */
-#define $2 innocuous_$2
-
-/* System header to define __stub macros and hopefully few prototypes,
-    which can conflict with char $2 (); below.
-    Prefer <limits.h> to <assert.h> if __STDC__ is defined, since
-    <limits.h> exists even on freestanding compilers.  */
-
-#ifdef __STDC__
-# include <limits.h>
-#else
-# include <assert.h>
-#endif
-
-#undef $2
-
-/* Override any GCC internal prototype to avoid an error.
-   Use char because int might match the return type of a GCC
-   builtin and then its argument prototype would still apply.  */
-#ifdef __cplusplus
-extern "C"
-#endif
-char $2 ();
-/* The GNU C library defines this for functions which it implements
-    to always fail with ENOSYS.  Some functions are actually named
-    something starting with __ and the normal name is an alias.  */
-#if defined __stub_$2 || defined __stub___$2
-choke me
-#endif
-
-int
-main ()
-{
-return $2 ();
-  ;
-  return 0;
-}
-_ACEOF
-if ac_fn_c_try_link "$LINENO"; then :
-  eval "$3=yes"
-else
-  eval "$3=no"
-fi
-rm -f core conftest.err conftest.$ac_objext \
-    conftest$ac_exeext conftest.$ac_ext
-fi
-eval ac_res=\$$3
-	       { $as_echo "$as_me:${as_lineno-$LINENO}: result: $ac_res" >&5
-$as_echo "$ac_res" >&6; }
-  eval $as_lineno_stack; ${as_lineno_stack:+:} unset as_lineno
-
-} # ac_fn_c_check_func
 cat >config.log <<_ACEOF
 This file contains any messages produced by compilers while
 running configure, to aid debugging if configure makes a mistake.
@@ -4111,6 +4121,436 @@ _ACEOF
 fi
 
 
+{ $as_echo "$as_me:${as_lineno-$LINENO}: checking for curl in -lcurl" >&5
+$as_echo_n "checking for curl in -lcurl... " >&6; }
+if ${ac_cv_lib_curl_curl+:} false; then :
+  $as_echo_n "(cached) " >&6
+else
+  ac_check_lib_save_LIBS=$LIBS
+LIBS="-lcurl  $LIBS"
+cat confdefs.h - <<_ACEOF >conftest.$ac_ext
+/* end confdefs.h.  */
+
+/* Override any GCC internal prototype to avoid an error.
+   Use char because int might match the return type of a GCC
+   builtin and then its argument prototype would still apply.  */
+#ifdef __cplusplus
+extern "C"
+#endif
+char curl ();
+int
+main ()
+{
+return curl ();
+  ;
+  return 0;
+}
+_ACEOF
+if ac_fn_c_try_link "$LINENO"; then :
+  ac_cv_lib_curl_curl=yes
+else
+  ac_cv_lib_curl_curl=no
+fi
+rm -f core conftest.err conftest.$ac_objext \
+    conftest$ac_exeext conftest.$ac_ext
+LIBS=$ac_check_lib_save_LIBS
+fi
+{ $as_echo "$as_me:${as_lineno-$LINENO}: result: $ac_cv_lib_curl_curl" >&5
+$as_echo "$ac_cv_lib_curl_curl" >&6; }
+if test "x$ac_cv_lib_curl_curl" = xyes; then :
+  cat >>confdefs.h <<_ACEOF
+#define HAVE_LIBCURL 1
+_ACEOF
+
+  LIBS="-lcurl $LIBS"
+
+fi
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+# Check whether --with-libcurl was given.
+if test "${with_libcurl+set}" = set; then :
+  withval=$with_libcurl; _libcurl_with=$withval
+else
+  _libcurl_with=yes
+fi
+
+
+  if test "$_libcurl_with" != "no" ; then
+
+     for ac_prog in gawk mawk nawk awk
+do
+  # Extract the first word of "$ac_prog", so it can be a program name with args.
+set dummy $ac_prog; ac_word=$2
+{ $as_echo "$as_me:${as_lineno-$LINENO}: checking for $ac_word" >&5
+$as_echo_n "checking for $ac_word... " >&6; }
+if ${ac_cv_prog_AWK+:} false; then :
+  $as_echo_n "(cached) " >&6
+else
+  if test -n "$AWK"; then
+  ac_cv_prog_AWK="$AWK" # Let the user override the test.
+else
+as_save_IFS=$IFS; IFS=$PATH_SEPARATOR
+for as_dir in $PATH
+do
+  IFS=$as_save_IFS
+  test -z "$as_dir" && as_dir=.
+    for ac_exec_ext in '' $ac_executable_extensions; do
+  if as_fn_executable_p "$as_dir/$ac_word$ac_exec_ext"; then
+    ac_cv_prog_AWK="$ac_prog"
+    $as_echo "$as_me:${as_lineno-$LINENO}: found $as_dir/$ac_word$ac_exec_ext" >&5
+    break 2
+  fi
+done
+  done
+IFS=$as_save_IFS
+
+fi
+fi
+AWK=$ac_cv_prog_AWK
+if test -n "$AWK"; then
+  { $as_echo "$as_me:${as_lineno-$LINENO}: result: $AWK" >&5
+$as_echo "$AWK" >&6; }
+else
+  { $as_echo "$as_me:${as_lineno-$LINENO}: result: no" >&5
+$as_echo "no" >&6; }
+fi
+
+
+  test -n "$AWK" && break
+done
+
+
+     _libcurl_version_parse="eval $AWK '{split(\$NF,A,\".\"); X=256*256*A[1]+256*A[2]+A[3]; print X;}'"
+
+     _libcurl_try_link=yes
+
+     if test -d "$_libcurl_with" ; then
+        LIBCURL_CPPFLAGS="-I$withval/include"
+        _libcurl_ldflags="-L$withval/lib"
+        # Extract the first word of "curl-config", so it can be a program name with args.
+set dummy curl-config; ac_word=$2
+{ $as_echo "$as_me:${as_lineno-$LINENO}: checking for $ac_word" >&5
+$as_echo_n "checking for $ac_word... " >&6; }
+if ${ac_cv_path__libcurl_config+:} false; then :
+  $as_echo_n "(cached) " >&6
+else
+  case $_libcurl_config in
+  [\\/]* | ?:[\\/]*)
+  ac_cv_path__libcurl_config="$_libcurl_config" # Let the user override the test with a path.
+  ;;
+  *)
+  as_save_IFS=$IFS; IFS=$PATH_SEPARATOR
+for as_dir in "$withval/bin"
+do
+  IFS=$as_save_IFS
+  test -z "$as_dir" && as_dir=.
+    for ac_exec_ext in '' $ac_executable_extensions; do
+  if as_fn_executable_p "$as_dir/$ac_word$ac_exec_ext"; then
+    ac_cv_path__libcurl_config="$as_dir/$ac_word$ac_exec_ext"
+    $as_echo "$as_me:${as_lineno-$LINENO}: found $as_dir/$ac_word$ac_exec_ext" >&5
+    break 2
+  fi
+done
+  done
+IFS=$as_save_IFS
+
+  ;;
+esac
+fi
+_libcurl_config=$ac_cv_path__libcurl_config
+if test -n "$_libcurl_config"; then
+  { $as_echo "$as_me:${as_lineno-$LINENO}: result: $_libcurl_config" >&5
+$as_echo "$_libcurl_config" >&6; }
+else
+  { $as_echo "$as_me:${as_lineno-$LINENO}: result: no" >&5
+$as_echo "no" >&6; }
+fi
+
+
+     else
+        # Extract the first word of "curl-config", so it can be a program name with args.
+set dummy curl-config; ac_word=$2
+{ $as_echo "$as_me:${as_lineno-$LINENO}: checking for $ac_word" >&5
+$as_echo_n "checking for $ac_word... " >&6; }
+if ${ac_cv_path__libcurl_config+:} false; then :
+  $as_echo_n "(cached) " >&6
+else
+  case $_libcurl_config in
+  [\\/]* | ?:[\\/]*)
+  ac_cv_path__libcurl_config="$_libcurl_config" # Let the user override the test with a path.
+  ;;
+  *)
+  as_save_IFS=$IFS; IFS=$PATH_SEPARATOR
+for as_dir in $PATH
+do
+  IFS=$as_save_IFS
+  test -z "$as_dir" && as_dir=.
+    for ac_exec_ext in '' $ac_executable_extensions; do
+  if as_fn_executable_p "$as_dir/$ac_word$ac_exec_ext"; then
+    ac_cv_path__libcurl_config="$as_dir/$ac_word$ac_exec_ext"
+    $as_echo "$as_me:${as_lineno-$LINENO}: found $as_dir/$ac_word$ac_exec_ext" >&5
+    break 2
+  fi
+done
+  done
+IFS=$as_save_IFS
+
+  ;;
+esac
+fi
+_libcurl_config=$ac_cv_path__libcurl_config
+if test -n "$_libcurl_config"; then
+  { $as_echo "$as_me:${as_lineno-$LINENO}: result: $_libcurl_config" >&5
+$as_echo "$_libcurl_config" >&6; }
+else
+  { $as_echo "$as_me:${as_lineno-$LINENO}: result: no" >&5
+$as_echo "no" >&6; }
+fi
+
+
+     fi
+
+     if test x$_libcurl_config != "x" ; then
+        { $as_echo "$as_me:${as_lineno-$LINENO}: checking for the version of libcurl" >&5
+$as_echo_n "checking for the version of libcurl... " >&6; }
+if ${libcurl_cv_lib_curl_version+:} false; then :
+  $as_echo_n "(cached) " >&6
+else
+  libcurl_cv_lib_curl_version=`$_libcurl_config --version | $AWK '{print $2}'`
+fi
+{ $as_echo "$as_me:${as_lineno-$LINENO}: result: $libcurl_cv_lib_curl_version" >&5
+$as_echo "$libcurl_cv_lib_curl_version" >&6; }
+
+        _libcurl_version=`echo $libcurl_cv_lib_curl_version | $_libcurl_version_parse`
+        _libcurl_wanted=`echo 0 | $_libcurl_version_parse`
+
+        if test $_libcurl_wanted -gt 0 ; then
+           { $as_echo "$as_me:${as_lineno-$LINENO}: checking for libcurl >= version " >&5
+$as_echo_n "checking for libcurl >= version ... " >&6; }
+if ${libcurl_cv_lib_version_ok+:} false; then :
+  $as_echo_n "(cached) " >&6
+else
+
+              if test $_libcurl_version -ge $_libcurl_wanted ; then
+                 libcurl_cv_lib_version_ok=yes
+              else
+                 libcurl_cv_lib_version_ok=no
+              fi
+
+fi
+{ $as_echo "$as_me:${as_lineno-$LINENO}: result: $libcurl_cv_lib_version_ok" >&5
+$as_echo "$libcurl_cv_lib_version_ok" >&6; }
+        fi
+
+        if test $_libcurl_wanted -eq 0 || test x$libcurl_cv_lib_version_ok = xyes ; then
+           if test x"$LIBCURL_CPPFLAGS" = "x" ; then
+              LIBCURL_CPPFLAGS=`$_libcurl_config --cflags`
+           fi
+           if test x"$LIBCURL" = "x" ; then
+              LIBCURL=`$_libcurl_config --libs`
+
+              # This is so silly, but Apple actually has a bug in their
+              # curl-config script.  Fixed in Tiger, but there are still
+              # lots of Panther installs around.
+              case "${host}" in
+                 powerpc-apple-darwin7*)
+                    LIBCURL=`echo $LIBCURL | sed -e 's|-arch i386||g'`
+                 ;;
+              esac
+           fi
+
+           # All curl-config scripts support --feature
+           _libcurl_features=`$_libcurl_config --feature`
+
+           # Is it modern enough to have --protocols? (7.12.4)
+           if test $_libcurl_version -ge 461828 ; then
+              _libcurl_protocols=`$_libcurl_config --protocols`
+           fi
+        else
+           _libcurl_try_link=no
+        fi
+
+        unset _libcurl_wanted
+     fi
+
+     if test $_libcurl_try_link = yes ; then
+
+        # we didn't find curl-config, so let's see if the user-supplied
+        # link line (or failing that, "-lcurl") is enough.
+        LIBCURL=${LIBCURL-"$_libcurl_ldflags -lcurl"}
+
+        { $as_echo "$as_me:${as_lineno-$LINENO}: checking whether libcurl is usable" >&5
+$as_echo_n "checking whether libcurl is usable... " >&6; }
+if ${libcurl_cv_lib_curl_usable+:} false; then :
+  $as_echo_n "(cached) " >&6
+else
+
+           _libcurl_save_cppflags=$CPPFLAGS
+           CPPFLAGS="$LIBCURL_CPPFLAGS $CPPFLAGS"
+           _libcurl_save_libs=$LIBS
+           LIBS="$LIBCURL $LIBS"
+
+           cat confdefs.h - <<_ACEOF >conftest.$ac_ext
+/* end confdefs.h.  */
+#include <curl/curl.h>
+int
+main ()
+{
+
+/* Try and use a few common options to force a failure if we are
+   missing symbols or can't link. */
+int x;
+curl_easy_setopt(NULL,CURLOPT_URL,NULL);
+x=CURL_ERROR_SIZE;
+x=CURLOPT_WRITEFUNCTION;
+x=CURLOPT_WRITEDATA;
+x=CURLOPT_ERRORBUFFER;
+x=CURLOPT_STDERR;
+x=CURLOPT_VERBOSE;
+if (x) ;
+
+  ;
+  return 0;
+}
+_ACEOF
+if ac_fn_c_try_link "$LINENO"; then :
+  libcurl_cv_lib_curl_usable=yes
+else
+  libcurl_cv_lib_curl_usable=no
+fi
+rm -f core conftest.err conftest.$ac_objext \
+    conftest$ac_exeext conftest.$ac_ext
+
+           CPPFLAGS=$_libcurl_save_cppflags
+           LIBS=$_libcurl_save_libs
+           unset _libcurl_save_cppflags
+           unset _libcurl_save_libs
+
+fi
+{ $as_echo "$as_me:${as_lineno-$LINENO}: result: $libcurl_cv_lib_curl_usable" >&5
+$as_echo "$libcurl_cv_lib_curl_usable" >&6; }
+
+        if test $libcurl_cv_lib_curl_usable = yes ; then
+
+           # Does curl_free() exist in this version of libcurl?
+           # If not, fake it with free()
+
+           _libcurl_save_cppflags=$CPPFLAGS
+           CPPFLAGS="$CPPFLAGS $LIBCURL_CPPFLAGS"
+           _libcurl_save_libs=$LIBS
+           LIBS="$LIBS $LIBCURL"
+
+           ac_fn_c_check_func "$LINENO" "curl_free" "ac_cv_func_curl_free"
+if test "x$ac_cv_func_curl_free" = xyes; then :
+
+else
+
+$as_echo "#define curl_free free" >>confdefs.h
+
+fi
+
+
+           CPPFLAGS=$_libcurl_save_cppflags
+           LIBS=$_libcurl_save_libs
+           unset _libcurl_save_cppflags
+           unset _libcurl_save_libs
+
+
+$as_echo "#define HAVE_LIBCURL 1" >>confdefs.h
+
+
+
+
+           for _libcurl_feature in $_libcurl_features ; do
+              cat >>confdefs.h <<_ACEOF
+#define `$as_echo "libcurl_feature_$_libcurl_feature" | $as_tr_cpp` 1
+_ACEOF
+
+              eval `$as_echo "libcurl_feature_$_libcurl_feature" | $as_tr_sh`=yes
+           done
+
+           if test "x$_libcurl_protocols" = "x" ; then
+
+              # We don't have --protocols, so just assume that all
+              # protocols are available
+              _libcurl_protocols="HTTP FTP FILE TELNET LDAP DICT TFTP"
+
+              if test x$libcurl_feature_SSL = xyes ; then
+                 _libcurl_protocols="$_libcurl_protocols HTTPS"
+
+                 # FTPS wasn't standards-compliant until version
+                 # 7.11.0 (0x070b00 == 461568)
+                 if test $_libcurl_version -ge 461568; then
+                    _libcurl_protocols="$_libcurl_protocols FTPS"
+                 fi
+              fi
+
+              # RTSP, IMAP, POP3 and SMTP were added in
+              # 7.20.0 (0x071400 == 463872)
+              if test $_libcurl_version -ge 463872; then
+                 _libcurl_protocols="$_libcurl_protocols RTSP IMAP POP3 SMTP"
+              fi
+           fi
+
+           for _libcurl_protocol in $_libcurl_protocols ; do
+              cat >>confdefs.h <<_ACEOF
+#define `$as_echo "libcurl_protocol_$_libcurl_protocol" | $as_tr_cpp` 1
+_ACEOF
+
+              eval `$as_echo "libcurl_protocol_$_libcurl_protocol" | $as_tr_sh`=yes
+           done
+        else
+           unset LIBCURL
+           unset LIBCURL_CPPFLAGS
+        fi
+     fi
+
+     unset _libcurl_try_link
+     unset _libcurl_version_parse
+     unset _libcurl_config
+     unset _libcurl_feature
+     unset _libcurl_features
+     unset _libcurl_protocol
+     unset _libcurl_protocols
+     unset _libcurl_version
+     unset _libcurl_ldflags
+  fi
+
+  if test x$_libcurl_with = xno || test x$libcurl_cv_lib_curl_usable != xyes ; then
+     # This is the IF-NO path
+     :
+  else
+     # This is the IF-YES path
+     :
+  fi
+
+  unset _libcurl_with
+
+
 if test "x$enable_ffmpeg" == "xyes"; then :
 
 
@@ -4217,9 +4657,9 @@ fi
 
 fi
 
-{ $as_echo "$as_me:${as_lineno-$LINENO}: checking for pcap_open_live in -lpcap" >&5
-$as_echo_n "checking for pcap_open_live in -lpcap... " >&6; }
-if ${ac_cv_lib_pcap_pcap_open_live+:} false; then :
+{ $as_echo "$as_me:${as_lineno-$LINENO}: checking for pcap_create in -lpcap" >&5
+$as_echo_n "checking for pcap_create in -lpcap... " >&6; }
+if ${ac_cv_lib_pcap_pcap_create+:} false; then :
   $as_echo_n "(cached) " >&6
 else
   ac_check_lib_save_LIBS=$LIBS
@@ -4233,27 +4673,27 @@ cat confdefs.h - <<_ACEOF >conftest.$ac_ext
 #ifdef __cplusplus
 extern "C"
 #endif
-char pcap_open_live ();
+char pcap_create ();
 int
 main ()
 {
-return pcap_open_live ();
+return pcap_create ();
   ;
   return 0;
 }
 _ACEOF
 if ac_fn_c_try_link "$LINENO"; then :
-  ac_cv_lib_pcap_pcap_open_live=yes
+  ac_cv_lib_pcap_pcap_create=yes
 else
-  ac_cv_lib_pcap_pcap_open_live=no
+  ac_cv_lib_pcap_pcap_create=no
 fi
 rm -f core conftest.err conftest.$ac_objext \
     conftest$ac_exeext conftest.$ac_ext
 LIBS=$ac_check_lib_save_LIBS
 fi
-{ $as_echo "$as_me:${as_lineno-$LINENO}: result: $ac_cv_lib_pcap_pcap_open_live" >&5
-$as_echo "$ac_cv_lib_pcap_pcap_open_live" >&6; }
-if test "x$ac_cv_lib_pcap_pcap_open_live" = xyes; then :
+{ $as_echo "$as_me:${as_lineno-$LINENO}: result: $ac_cv_lib_pcap_pcap_create" >&5
+$as_echo "$ac_cv_lib_pcap_pcap_create" >&6; }
+if test "x$ac_cv_lib_pcap_pcap_create" = xyes; then :
   cat >>confdefs.h <<_ACEOF
 #define HAVE_LIBPCAP 1
 _ACEOF
@@ -4262,74 +4702,6 @@ _ACEOF
 
 fi
 
-{ $as_echo "$as_me:${as_lineno-$LINENO}: checking for pthread_create in -lpthread" >&5
-$as_echo_n "checking for pthread_create in -lpthread... " >&6; }
-if ${ac_cv_lib_pthread_pthread_create+:} false; then :
-  $as_echo_n "(cached) " >&6
-else
-  ac_check_lib_save_LIBS=$LIBS
-LIBS="-lpthread  $LIBS"
-cat confdefs.h - <<_ACEOF >conftest.$ac_ext
-/* end confdefs.h.  */
-
-/* Override any GCC internal prototype to avoid an error.
-   Use char because int might match the return type of a GCC
-   builtin and then its argument prototype would still apply.  */
-#ifdef __cplusplus
-extern "C"
-#endif
-char pthread_create ();
-int
-main ()
-{
-return pthread_create ();
-  ;
-  return 0;
-}
-_ACEOF
-if ac_fn_c_try_link "$LINENO"; then :
-  ac_cv_lib_pthread_pthread_create=yes
-else
-  ac_cv_lib_pthread_pthread_create=no
-fi
-rm -f core conftest.err conftest.$ac_objext \
-    conftest$ac_exeext conftest.$ac_ext
-LIBS=$ac_check_lib_save_LIBS
-fi
-{ $as_echo "$as_me:${as_lineno-$LINENO}: result: $ac_cv_lib_pthread_pthread_create" >&5
-$as_echo "$ac_cv_lib_pthread_pthread_create" >&6; }
-if test "x$ac_cv_lib_pthread_pthread_create" = xyes; then :
-  cat >>confdefs.h <<_ACEOF
-#define HAVE_LIBPTHREAD 1
-_ACEOF
-
-  LIBS="-lpthread $LIBS"
-
-fi
-
-
-if test "$ac_cv_lib_SDL_main" == no
-then
-	as_fn_error $? "Please install the SDL development libraries" "$LINENO" 5
-fi
-if test "$ac_cv_lib_pcap_main" == no
-then
-	as_fn_error $? "Please install the libpcap development libraries" "$LINENO" 5
-fi
-
-{ $as_echo "$as_me:${as_lineno-$LINENO}: checking for libcurl" >&5
-$as_echo_n "checking for libcurl... " >&6; }
-if curl-config --libs > /dev/null
-then
-	{ $as_echo "$as_me:${as_lineno-$LINENO}: result: yes" >&5
-$as_echo "yes" >&6; }
-else
-	{ $as_echo "$as_me:${as_lineno-$LINENO}: result: no" >&5
-$as_echo "no" >&6; }
-	as_fn_error $? "Please install the libcurl development libraries" "$LINENO" 5
-fi
-
-# Checks for header files.
 ac_ext=c
 ac_cpp='$CPP $CPPFLAGS'
 ac_compile='$CC -c $CFLAGS $CPPFLAGS conftest.$ac_ext >&5'
@@ -4726,6 +5098,199 @@ fi
 
 done
 
+
+for ac_header in pcap/pcap.h
+do :
+  ac_fn_c_check_header_mongrel "$LINENO" "pcap/pcap.h" "ac_cv_header_pcap_pcap_h" "$ac_includes_default"
+if test "x$ac_cv_header_pcap_pcap_h" = xyes; then :
+  cat >>confdefs.h <<_ACEOF
+#define HAVE_PCAP_PCAP_H 1
+_ACEOF
+
+fi
+
+done
+
+
+{ $as_echo "$as_me:${as_lineno-$LINENO}: checking for pthread_create in -lpthread" >&5
+$as_echo_n "checking for pthread_create in -lpthread... " >&6; }
+if ${ac_cv_lib_pthread_pthread_create+:} false; then :
+  $as_echo_n "(cached) " >&6
+else
+  ac_check_lib_save_LIBS=$LIBS
+LIBS="-lpthread  $LIBS"
+cat confdefs.h - <<_ACEOF >conftest.$ac_ext
+/* end confdefs.h.  */
+
+/* Override any GCC internal prototype to avoid an error.
+   Use char because int might match the return type of a GCC
+   builtin and then its argument prototype would still apply.  */
+#ifdef __cplusplus
+extern "C"
+#endif
+char pthread_create ();
+int
+main ()
+{
+return pthread_create ();
+  ;
+  return 0;
+}
+_ACEOF
+if ac_fn_c_try_link "$LINENO"; then :
+  ac_cv_lib_pthread_pthread_create=yes
+else
+  ac_cv_lib_pthread_pthread_create=no
+fi
+rm -f core conftest.err conftest.$ac_objext \
+    conftest$ac_exeext conftest.$ac_ext
+LIBS=$ac_check_lib_save_LIBS
+fi
+{ $as_echo "$as_me:${as_lineno-$LINENO}: result: $ac_cv_lib_pthread_pthread_create" >&5
+$as_echo "$ac_cv_lib_pthread_pthread_create" >&6; }
+if test "x$ac_cv_lib_pthread_pthread_create" = xyes; then :
+  cat >>confdefs.h <<_ACEOF
+#define HAVE_LIBPTHREAD 1
+_ACEOF
+
+  LIBS="-lpthread $LIBS"
+
+fi
+
+
+if test "$ac_cv_lib_SDL_main" == no
+then
+	as_fn_error $? "Please install the SDL development libraries" "$LINENO" 5
+fi
+if test "$ac_cv_lib_pcap_main" == no
+then
+	as_fn_error $? "Please install the libpcap development libraries" "$LINENO" 5
+fi
+
+{ $as_echo "$as_me:${as_lineno-$LINENO}: checking for libcurl" >&5
+$as_echo_n "checking for libcurl... " >&6; }
+if curl-config --libs > /dev/null
+then
+	{ $as_echo "$as_me:${as_lineno-$LINENO}: result: yes" >&5
+$as_echo "yes" >&6; }
+else
+	{ $as_echo "$as_me:${as_lineno-$LINENO}: result: no" >&5
+$as_echo "no" >&6; }
+	as_fn_error $? "Please install the libcurl development libraries" "$LINENO" 5
+fi
+
+# Checks for header files.
+{ $as_echo "$as_me:${as_lineno-$LINENO}: checking for ANSI C header files" >&5
+$as_echo_n "checking for ANSI C header files... " >&6; }
+if ${ac_cv_header_stdc+:} false; then :
+  $as_echo_n "(cached) " >&6
+else
+  cat confdefs.h - <<_ACEOF >conftest.$ac_ext
+/* end confdefs.h.  */
+#include <stdlib.h>
+#include <stdarg.h>
+#include <string.h>
+#include <float.h>
+
+int
+main ()
+{
+
+  ;
+  return 0;
+}
+_ACEOF
+if ac_fn_c_try_compile "$LINENO"; then :
+  ac_cv_header_stdc=yes
+else
+  ac_cv_header_stdc=no
+fi
+rm -f core conftest.err conftest.$ac_objext conftest.$ac_ext
+
+if test $ac_cv_header_stdc = yes; then
+  # SunOS 4.x string.h does not declare mem*, contrary to ANSI.
+  cat confdefs.h - <<_ACEOF >conftest.$ac_ext
+/* end confdefs.h.  */
+#include <string.h>
+
+_ACEOF
+if (eval "$ac_cpp conftest.$ac_ext") 2>&5 |
+  $EGREP "memchr" >/dev/null 2>&1; then :
+
+else
+  ac_cv_header_stdc=no
+fi
+rm -f conftest*
+
+fi
+
+if test $ac_cv_header_stdc = yes; then
+  # ISC 2.0.2 stdlib.h does not declare free, contrary to ANSI.
+  cat confdefs.h - <<_ACEOF >conftest.$ac_ext
+/* end confdefs.h.  */
+#include <stdlib.h>
+
+_ACEOF
+if (eval "$ac_cpp conftest.$ac_ext") 2>&5 |
+  $EGREP "free" >/dev/null 2>&1; then :
+
+else
+  ac_cv_header_stdc=no
+fi
+rm -f conftest*
+
+fi
+
+if test $ac_cv_header_stdc = yes; then
+  # /bin/cc in Irix-4.0.5 gets non-ANSI ctype macros unless using -ansi.
+  if test "$cross_compiling" = yes; then :
+  :
+else
+  cat confdefs.h - <<_ACEOF >conftest.$ac_ext
+/* end confdefs.h.  */
+#include <ctype.h>
+#include <stdlib.h>
+#if ((' ' & 0x0FF) == 0x020)
+# define ISLOWER(c) ('a' <= (c) && (c) <= 'z')
+# define TOUPPER(c) (ISLOWER(c) ? 'A' + ((c) - 'a') : (c))
+#else
+# define ISLOWER(c) \
+		   (('a' <= (c) && (c) <= 'i') \
+		     || ('j' <= (c) && (c) <= 'r') \
+		     || ('s' <= (c) && (c) <= 'z'))
+# define TOUPPER(c) (ISLOWER(c) ? ((c) | 0x40) : (c))
+#endif
+
+#define XOR(e, f) (((e) && !(f)) || (!(e) && (f)))
+int
+main ()
+{
+  int i;
+  for (i = 0; i < 256; i++)
+    if (XOR (islower (i), ISLOWER (i))
+	|| toupper (i) != TOUPPER (i))
+      return 2;
+  return 0;
+}
+_ACEOF
+if ac_fn_c_try_run "$LINENO"; then :
+
+else
+  ac_cv_header_stdc=no
+fi
+rm -f core *.core core.conftest.* gmon.out bb.out conftest$ac_exeext \
+  conftest.$ac_objext conftest.beam conftest.$ac_ext
+fi
+
+fi
+fi
+{ $as_echo "$as_me:${as_lineno-$LINENO}: result: $ac_cv_header_stdc" >&5
+$as_echo "$ac_cv_header_stdc" >&6; }
+if test $ac_cv_header_stdc = yes; then
+
+$as_echo "#define STDC_HEADERS 1" >>confdefs.h
+
+fi
 
 for ac_header in fcntl.h netdb.h netinet/in.h stdlib.h string.h strings.h sys/socket.h sys/time.h unistd.h ffmpeg/avcodec.h ffmpeg/avformat.h
 do :
