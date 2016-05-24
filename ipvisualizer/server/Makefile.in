@@ -109,9 +109,10 @@ am_ipvisualizer_flowserv_OBJECTS =  \
 	../shared/ipvisualizer_flowserv-flowdata.$(OBJEXT) \
 	../shared/ipvisualizer_flowserv-config.$(OBJEXT)
 ipvisualizer_flowserv_OBJECTS = $(am_ipvisualizer_flowserv_OBJECTS)
-ipvisualizer_flowserv_LDADD = $(LDADD)
+am__DEPENDENCIES_1 =
+ipvisualizer_flowserv_DEPENDENCIES = $(am__DEPENDENCIES_1)
 ipvisualizer_flowserv_LINK = $(CCLD) $(ipvisualizer_flowserv_CFLAGS) \
-	$(CFLAGS) $(ipvisualizer_flowserv_LDFLAGS) $(LDFLAGS) -o $@
+	$(CFLAGS) $(AM_LDFLAGS) $(LDFLAGS) -o $@
 AM_V_P = $(am__v_P_@AM_V@)
 am__v_P_ = $(am__v_P_@AM_DEFAULT_V@)
 am__v_P_0 = false
@@ -266,7 +267,7 @@ top_builddir = @top_builddir@
 top_srcdir = @top_srcdir@
 AUTOMAKE_OPTIONS = subdir-objects
 ipvisualizer_flowservprgdir = $(prefix)/bin/
-ipvisualizer_flowserv_LDFLAGS = ${pcap_LIBS} ${LIBCURL}
+ipvisualizer_flowserv_LDADD = ${pcap_LIBS} ${LIBCURL}
 ipvisualizer_flowserv_CFLAGS = ${pcap_CFLAGS} ${LIBCURL_CPPFLAGS}
 ipvisualizer_flowserv_SOURCES = flowserv.c fwrules.c globals.c sockutils.c subnets.c ../shared/flowdata.c ../shared/config.c fwrules.h globals.h mygettime.h sockutils.h structs.h subnets.h ../shared/config.h ../shared/flowdata.h
 all: all-am
