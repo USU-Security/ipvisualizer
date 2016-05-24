@@ -88,7 +88,7 @@ void delclient(unsigned int ip, unsigned short port);
  * purpose:		to send some data to all of our clients
  * recieves:	a pointer to the data, and its length
  */
-inline void sendclients(void* data, int dlen)
+void sendclients(void* data, int dlen)
 {
 	int i;
 	struct sockaddr_in sin;
@@ -119,7 +119,7 @@ inline void sendclients(void* data, int dlen)
  * purpose:	to flush data to a client socket
  * recieves:	a client struct
  */
-inline void flushbuffer() {
+void flushbuffer() {
 	sendclients(&flowbuffer, flowpacketsize(buffer) + SIZEOF_PACKETHEADER);
 	lastupdate = gettime();
 	buffer->count = 0;
