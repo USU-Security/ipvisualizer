@@ -173,10 +173,10 @@ typedef struct t_binaryrule {
 } binaryrule;
 
 
-inline int flowpacketsize(struct flowpacket* f);
-inline int fwflowpacketsize(struct fwflowpacket* f);
-inline int subnetpacketsize(struct subnetpacket* s);
-inline void readrulepacket(void* buffer, struct fwrulepacket* r);
+int flowpacketsize(struct flowpacket* f);
+int fwflowpacketsize(struct fwflowpacket* f);
+int subnetpacketsize(struct subnetpacket* s);
+void readrulepacket(void* buffer, struct fwrulepacket* r);
 int writerulepacket(void* buffer, unsigned short num, unsigned short max, const char* string);
 
 #endif /* !FLOWDATA_H */

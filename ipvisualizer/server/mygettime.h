@@ -30,7 +30,7 @@
  * purpose: to return the time in milliseconds since the unix epoch
  * returns: didn't you read the purpose?
  */
-inline unsigned long long gettime() {
+unsigned long long gettime() {
     struct timeval tv;
     gettimeofday(&tv, NULL);
     return (tv.tv_sec * 1000 + tv.tv_usec / 1000);

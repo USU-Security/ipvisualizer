@@ -123,7 +123,7 @@ void keyup(unsigned char k, int x, int y);
 unsigned short fwd_netblock(unsigned short);
 unsigned short rev_netblock(unsigned short);
 void update_menubar();
-inline unsigned short mappixel(unsigned short ip);
+unsigned short mappixel(unsigned short ip);
 void sdl_eventloop();
 void printdisplay(const char* s, unsigned short ip);
 void allocatescreen();
@@ -662,7 +662,7 @@ void keyup(unsigned char k, int x, int y)
  * recieves:	ip
  * returns:		pixel
  */
-inline unsigned short mappixel(unsigned short ip)
+unsigned short mappixel(unsigned short ip)
 {
 	switch (mapping) {
 	case 0: /* linear mapping */
@@ -678,7 +678,7 @@ inline unsigned short mappixel(unsigned short ip)
 	mapping = 0;
 	return ip;
 }
-inline unsigned short unmappixel(unsigned short ip)
+unsigned short unmappixel(unsigned short ip)
 {
 	switch (mapping) {
 	case 0: /*linear*/
@@ -774,7 +774,7 @@ void reshape (int w, int h)
  * purpose:		to draw a line to the left of a pixel
  * recieves:	the x and y coords, and the blue, green and red components
  */
-inline void lineleft(int i, int j, unsigned char b, unsigned char g, unsigned char r)
+void lineleft(int i, int j, unsigned char b, unsigned char g, unsigned char r)
 {
 	int k;
 	for (k = 0; k < BLOCKHEIGHT; k++) 
@@ -793,7 +793,7 @@ inline void lineleft(int i, int j, unsigned char b, unsigned char g, unsigned ch
  * purpose:     to draw a line above a pixel
  * recieves:    the x and y coords, and the blue, green and red components
  */
-inline void lineup(int i, int j, unsigned char b, unsigned char g, unsigned char r)
+void lineup(int i, int j, unsigned char b, unsigned char g, unsigned char r)
 {
 	int k;
 	for (k = 0; k < BLOCKWIDTH; k++) 
@@ -963,7 +963,7 @@ int idle()
 	return 0;
 }
 
-inline void renderstring(const char* s)
+void renderstring(const char* s)
 {
 /*	while (*s)
 		glutBitmapCharacter(GLUT_BITMAP_8_BY_13, *(s++)); */
