@@ -1,0 +1,14 @@
+*.o
+.deps
+*.swp
+*~
+autom4te.cache
+Makefile
+ipvisualizer_display
+compile
+config.h
+config.log
+config.status
+ipvisualizer_flowserv
+.dirstamp
+stamp-h1
