@@ -18,6 +18,5 @@ Run the client
 Packages
 --------
  * `deb http://mirror.usu.edu/usu-security [codename]-security-unstable`
- * sid, jessie, wheezy
- * someone remind me to build for ubuntu again
+ * debian: `sid`, `jessie`, `wheezy`, `squeeze`; ubuntu: `vivid`, `wily`, `xenial`
  * install `usu-archive-keyring` package and apt-get update
