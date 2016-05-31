@@ -3,7 +3,7 @@
 
 AUTOMAKE_OPTIONS=subdir-objects
 
-AC_PREREQ([2.69])
+AC_PREREQ([2.61])
 AC_INIT([IPVISUALIZER],[0.4.3],[esk-ipvisualizer@esk.cs.usu.edu])
 AM_INIT_AUTOMAKE
 AC_CONFIG_SRCDIR([client/constants.h])
