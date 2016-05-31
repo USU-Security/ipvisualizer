@@ -6,5 +6,5 @@ before_install:
 
 install: true
 
-script: cd ipvisualizer && ./autogen.sh && ./configure && make && make test
+script: cd ipvisualizer && ./autogen.sh && ./configure && make
 
