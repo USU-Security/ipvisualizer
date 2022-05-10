@@ -44,7 +44,7 @@ port = 4321
 tcp_data="Random data for a TCP packet..."
 
 def ip_to_int( ip ):
-	(a,b,c,d) = map(int,ip.split('.'))
+	(a,b,c,d) = list(map(int,ip.split('.')))
 	return a<<24|b<<16|c<<8|d
 
 def red(ip, n=3):
@@ -122,8 +122,8 @@ def get_pixels_from_image( filename ):
 		max_val = 5
 		return int(val * max_val / 256)
 	
-	for y in xrange(256):
-		for x in xrange(256):
+	for y in range(256):
+		for x in range(256):
 			r,g,b = im.getpixel( (x,y) )
 			if r or g or b:
 				pixel = fwd_map(256*(256-y)+x)
@@ -139,9 +139,9 @@ def get_addresses_from_bmp( filename ):
 	g_addr = []
 	b_addr = []
 
-	for k in x.__dict__.keys():
+	for k in list(x.__dict__.keys()):
 		if k[:2] in ('bf','bi'):
-			print k, x.__dict__[k]
+			print(k, x.__dict__[k])
 
 	while i < x.biWidth*x.biHeight:
 		if x.rgbdata[i]:
@@ -165,9 +165,9 @@ def get_pixels_from_bmp( filename ):
 	pixels = []
 	max_brightness = 4
 
-	for k in x.__dict__.keys():
+	for k in list(x.__dict__.keys()):
 		if k[:2] in ('bf','bi'):
-			print k, x.__dict__[k]
+			print(k, x.__dict__[k])
 
 	while i < x.biWidth*x.biHeight:
 		if x.rgbdata[i]:
@@ -193,7 +193,7 @@ def draw_pixels( pixels ):
 	f = open('packets.hex','w')
 	port = 4321
 	tcp_data="Random data for a TCP packet..."
-	print time.time(), "\tpregenerating packets"
+	print(time.time(), "\tpregenerating packets")
 	for pixel in pixels:
 		if( pixel[R] ):
 			udp_ip_hdr = build_ip_header( dst = 0x817b0000 | pixel[P], ttl = 3, proto = 17 )
@@ -238,7 +238,7 @@ def draw_pixels( pixels ):
 	t0 = time.time()
 	count = 0
 	while count < 2:
-		print time.time(), "\tsending packets, count:", count
+		print(time.time(), "\tsending packets, count:", count)
 		for sendpkt in pktstore:
 			for numberpkt in range(sendpkt[0]):
 				s.sendto(sendpkt[1], sendpkt[2])
@@ -246,7 +246,7 @@ def draw_pixels( pixels ):
 		delta = t1-t0
 		t0 = t1
 		if delta < 10:
-			print time.time(), "\tsleeping"
+			print(time.time(), "\tsleeping")
 			time.sleep(10 - delta)
 		count += 1
 
@@ -260,13 +260,13 @@ def shift_pixels( pixels, x, y, wrap=True ):
 	return newpixels
 
 def draw_image( filename, ):
-	print time.time(), "getting image data"
+	print(time.time(), "getting image data")
 	pixels = get_pixels_from_image(filename)
 	#print time.time(), "randomizing pixels"
 	#random.shuffle(pixels)
-	print time.time(), "drawing"
+	print(time.time(), "drawing")
 	draw_pixels( pixels )
-	print time.time(), "done"
+	print(time.time(), "done")
 
 def set_map( fwd ):
 	global fwd_map
@@ -274,7 +274,7 @@ def set_map( fwd ):
 
 def alt_draw( filename ):
 	r, g, b = get_addresses_from_bmp(filename)
-	print type(r),len(r)
+	print(type(r),len(r))
 	for i in r:
 		red(i)
 	for i in g:
@@ -283,7 +283,7 @@ def alt_draw( filename ):
 		blue(i)
 
 if __name__ == "__main__":
-	print sys.argv
+	print(sys.argv)
 	global fwd_map
 	fwd_map = fwd_netblock
 	#time.sleep(10)
