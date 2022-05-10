@@ -1,4 +1,4 @@
-#!/usr/bin/python
+#!/usr/bin/python3
 
 from bmp import BMPWrapper
 from ip_foo import *
