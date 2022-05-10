@@ -2,6 +2,8 @@
 .deps
 *.swp
 *~
+__pycache__
+packets.hex
 autom4te.cache
 Makefile
 ipvisualizer_display
