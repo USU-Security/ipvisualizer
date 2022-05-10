@@ -20,7 +20,7 @@ def get_tcp_checksum( data ):
 		sum = ( sum & 0xFFFF ) + ( sum >> 16 )
 	return ntohs( ( ~sum ) & 0xFFFF )
 
-def build_tcp_header( spt=0, dpt=0, seq=0, ack=0, offset=None, flags=2, win=0, checksum=0, urg=0, opts=None, src=None, dst=None, data='' ):
+def build_tcp_header( spt=0, dpt=0, seq=0, ack=0, offset=None, flags=2, win=0, checksum=0, urg=0, opts=None, src=None, dst=None, data=b'' ):
 	TCPHdrFmt = 'HHIIBBHHH'
 	if not offset:
 		offset=5
@@ -45,7 +45,7 @@ def build_udp_header( spt=0, dpt=0, len=8, checksum=0 ):
 	udp_hdr = struct.pack( UDPHdrFmt, htons(spt), htons(dpt), htons(len), htons(checksum) )
 	return udp_hdr
 
-def build_icmp_header( type=0, code=0, checksum=0, id=0, seq=0, data='', src=None, dst=None ):
+def build_icmp_header( type=0, code=0, checksum=0, id=0, seq=0, data=b'', src=None, dst=None ):
 	ICMPHdrFmt = 'BBHHH'
 	icmp_len=0*4
 	icmp_len += len(data)
@@ -66,16 +66,16 @@ def build_packet_x( ):
 	icmp_hdr = build_icmp_header( type=8, code=0, id=1337 )
 	return ip_hdr + icmp_hdr
 
-def build_icmp_echo_packet( src=0, dst=0, spt=0, dpt=0, ttl=10, seq=0, data='' ):
+def build_icmp_echo_packet( src=0, dst=0, spt=0, dpt=0, ttl=10, seq=0, data=b'' ):
 	ip_hdr = build_ip_header( src=src, dst=dst, flags=0, ttl=ttl, proto=1 )
 	icmp_hdr = build_icmp_header( type=8, data=data )
 	return ip_hdr + icmp_hdr
 
-def build_tcp_syn_packet( src=0, dst=0, spt=0, dpt=0, ttl=10, seq=0, data='' ):
+def build_tcp_syn_packet( src=0, dst=0, spt=0, dpt=0, ttl=10, seq=0, data=b'' ):
 	#tcp_ip_hdr = build_ip_header( dst = 0x817b0000 | pixel[P], ttl = 3, proto = 6, flags=4 )
 	#tcp_hdr = build_tcp_header( spt = 1234, dpt = 4321, flags=2, seq=random.getrandbits(32), win=2048 )
 	ip_hdr = build_ip_header( src=src, dst=dst, flags=0, ttl=ttl, proto=6 )
-	tcp_opts = "\x02\x04\x05\xb4"
+	tcp_opts = b"\x02\x04\x05\xb4"
 	#tcp_opts = None
 	tcp_hdr = build_tcp_header( spt=spt, dpt=dpt, seq=seq, opts=tcp_opts, flags=2, win=1024, src=src, dst=dst, data=data )
 	#if data:

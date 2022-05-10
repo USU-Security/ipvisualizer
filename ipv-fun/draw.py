@@ -41,7 +41,7 @@ spt = 1
 s = socket(AF_INET,SOCK_RAW,IPPROTO_RAW)
 f = open('packets.hex','w')
 port = 4321
-tcp_data="Random data for a TCP packet..."
+tcp_data=b"Random data for a TCP packet..."
 
 def ip_to_int( ip ):
 	(a,b,c,d) = list(map(int,ip.split('.')))
@@ -58,7 +58,7 @@ def red(ip, n=3):
 		i+=1
 		
 def green(ip, n=3):
-	tcp_pkt = build_tcp_syn_packet( src=src, dst=ip_to_int(ip), spt=spt, dpt=4321, seq=seq, ttl=3, data="meh " )
+	tcp_pkt = build_tcp_syn_packet( src=src, dst=ip_to_int(ip), spt=spt, dpt=4321, seq=seq, ttl=3, data=b"meh " )
 	if debug:
 		f.write( tcp_pkt )
 	i = 0
@@ -192,7 +192,7 @@ def draw_pixels( pixels ):
 	s = socket(AF_INET,SOCK_RAW,IPPROTO_RAW)
 	f = open('packets.hex','w')
 	port = 4321
-	tcp_data="Random data for a TCP packet..."
+	tcp_data=b"Random data for a TCP packet..."
 	print(time.time(), "\tpregenerating packets")
 	for pixel in pixels:
 		if( pixel[R] ):
@@ -209,7 +209,7 @@ def draw_pixels( pixels ):
 		if( pixel[G] ):
 			# send this packet pixel[G] times for brightness
 			i=0
-			tcp_pkt = build_tcp_syn_packet( src=src, dst=0x817b0000 | pixel[P], spt=spt, dpt=4321, seq=seq, ttl=3, data="meh " )
+			tcp_pkt = build_tcp_syn_packet( src=src, dst=0x817b0000 | pixel[P], spt=spt, dpt=4321, seq=seq, ttl=3, data=b"meh " )
 			if debug:
 				f.write( tcp_pkt )
 			#while i < pixel[G] : 
