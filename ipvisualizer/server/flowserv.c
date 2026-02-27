@@ -427,6 +427,7 @@ int main(int argc, char* argv[])
 
 	j = 0;
 	printf("DEBUG: localip=0x%08x localmask=0x%08x\n", localip, localmask);
+	fflush(stdout);
 	for (i = 0; i < numsubnets; i++) {
 		unsigned char a = (subarray[i].base >> 24) & 0xFF;
 		unsigned char b = (subarray[i].base >> 16) & 0xFF;
@@ -434,6 +435,7 @@ int main(int argc, char* argv[])
 		unsigned char d = subarray[i].base & 0xFF;
 		printf("DEBUG: Checking subnet %d: %u.%u.%u.%u/%d (0x%08x & 0x%08x = 0x%08x, localip=0x%08x) ", 
 			i, a, b, c, d, subarray[i].mask, subarray[i].base, localmask, (subarray[i].base & localmask), localip);
+		fflush(stdout);
 		/* only report the subnets if they are within our range */
 		if ((subarray[i].base & localmask) == localip) {
 			printf("PASS\n");
@@ -444,11 +446,13 @@ int main(int argc, char* argv[])
 		} else {
 			printf("FAIL\n");
 		}
+		fflush(stdout);
 	}
 	subnets->count = j;
 	subnets->base = localip;
 	subnets->mask = localmask;
 	printf("Recieved information about %i subnets, %i passed filter\n", numsubnets, j);
+	fflush(stdout);
 /*
 	firewallrules = getfwrules("singsing.usu.edu", "/admin/firewall/currentrules.php?f=1", fwruleauthorization, &numfwrules);
 
