@@ -12,11 +12,13 @@ ipvisualizer_flowserv
 compile
 config.h
 config.h.in
+config.h.in~
 config.log
 config.status
 config.sub
 config.guess
 configure
+configure~
 .dirstamp
 stamp-h1
 libtool
@@ -25,4 +27,6 @@ libtool
 depcomp
 install-sh
 missing
+aclocal.m4
+INSTALL
 *.dat
