@@ -269,7 +269,7 @@ void mousedown(SDL_MouseButtonEvent* e)
 	if (e->button == SDL_BUTTON_LEFT || e->button == SDL_BUTTON_RIGHT) 
 	{
 		highlightarea.x2 = highlightarea.x1 = e->x /(float)width *IMGWIDTH;
-		highlightarea.y2 = highlightarea.y1 = IMGHEIGHT - e->y / (float)height * IMGHEIGHT;
+		highlightarea.y2 = highlightarea.y1 = e->y / (float)height * IMGHEIGHT;  // Changed: removed IMGHEIGHT - for flipped Y
 		highlighting = e->button;
 	}
 	else if (e->button == SDL_BUTTON_WHEELUP)
@@ -702,7 +702,7 @@ unsigned short unmappixel(unsigned short ip)
 void mousemove(int x, int y)
 {
 	highlightarea.x2 = x /(float)width *IMGWIDTH;
-	highlightarea.y2 = IMGHEIGHT - y / (float)height * IMGHEIGHT;
+	highlightarea.y2 = y / (float)height * IMGHEIGHT;  // Changed: removed IMGHEIGHT - for flipped Y
 	/* find out what ips they have highlighted */
 	unsigned short ip1 = ((unsigned int)(highlightarea.x1/BLOCKWIDTH) + ((unsigned int)(highlightarea.y1/BLOCKHEIGHT) * MAPWIDTH));
 	unsigned short ip2 = ((unsigned int)(highlightarea.x2/BLOCKWIDTH) + ((unsigned int)(highlightarea.y2/BLOCKHEIGHT) * MAPWIDTH));
@@ -725,12 +725,24 @@ void mousemove(int x, int y)
 	x *= scalex;
 	y *= scaley;
 	y += .5;
+	// Flipped: when y is small (top of screen), display text at bottom
 	if (y < (int)MAPHEIGHT/2)
-		displayy = 0;
-	else
 		displayy =  IMGHEIGHT - 13*((float)IMGHEIGHT/height);
+	else
+		displayy = 13*((float)IMGHEIGHT/height);  // Changed: small offset from top instead of 0
 	
-	unsigned short mappixel = x + ((MAPHEIGHT - y - 1) * MAPWIDTH);
+	// Bounds check - cast to int for proper comparison
+	int xi = (int)x;
+	int yi = (int)y;
+	if (xi < 0 || xi >= MAPWIDTH || yi < 0 || yi >= MAPHEIGHT)
+		return;
+	
+	unsigned short mappixel = xi + (yi * MAPWIDTH);  // Changed: removed flip calculation for Y
+	
+	// Bounds check for array access
+	if (mappixel >= 65536)
+		return;
+	
 	unsigned int ip = unmappixel(mappixel);
 	if ((ip & ~localmask) != ip)
 		return;
@@ -762,7 +774,7 @@ void reshape (int w, int h)
 	glMatrixMode(GL_PROJECTION);
 	glLoadIdentity();
 	//glPixelZoom((float)w/IMGWIDTH, (float)h/IMGHEIGHT);
-	gluOrtho2D(0, IMGWIDTH, 0, IMGHEIGHT);
+	gluOrtho2D(0, IMGWIDTH, IMGHEIGHT, 0);  // Flipped Y coordinates: top-down instead of bottom-up
 	glMatrixMode(GL_MODELVIEW);
 	glLoadIdentity();
 
@@ -1316,12 +1328,39 @@ void updatesubnets(struct subnetpacket* sp)
 	int i;
 	int max = sp->count>MAXINDEX ? MAXINDEX : sp->count;
 	numsubnets = max;
-	printf("Recived information about %i subnets\n", numsubnets); 
+	printf("Total subnets received: %i\n", numsubnets);
+	printf("sp->base = 0x%08x, sp->mask = 0x%08x\n", sp->base, sp->mask);
+	
+	// Check for specific 144.39.192.0/18 subnet
+	int found_144_39_192 = 0;
+	printf("\nAll 144.39.x.x subnets received:\n");
 	for (i = 0; i < numsubnets; i++)
 	{
 		subnets[i].base = sp->subnets[i].base + sp->base;
 		subnets[i].mask = sp->subnets[i].mask;
+		
+		unsigned char a = (subnets[i].base >> 24) & 0xFF;
+		unsigned char b = (subnets[i].base >> 16) & 0xFF;
+		unsigned char c = (subnets[i].base >> 8) & 0xFF;
+		unsigned char d = subnets[i].base & 0xFF;
+		
+		// Check for 144.39.192.0/18
+		if (a == 144 && b == 39 && c == 192 && d == 0 && subnets[i].mask == 18) {
+			printf("*** FOUND 144.39.192.0/18 at index %d ***\n", i);
+			found_144_39_192 = 1;
+		}
+		
+		// List all 144.39.x.x subnets
+		if (a == 144 && b == 39) {
+			printf("  [%d] %u.%u.%u.%u/%u (base=0x%08x)\n", i, a, b, c, d, subnets[i].mask, subnets[i].base);
+		}
 	}
+	
+	if (!found_144_39_192) {
+		printf("\n*** Subnet 144.39.192.0/18: NOT FOUND ***\n");
+	}
+	
+	printf("\nRecived information about %i subnets\n", numsubnets); 
 	/* redraw the subnet stuff */
 	initbuffer();
 }
