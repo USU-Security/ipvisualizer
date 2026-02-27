@@ -2,6 +2,7 @@
 .deps
 *.swp
 *~
+*.orig
 __pycache__
 packets.hex
 autom4te.cache
