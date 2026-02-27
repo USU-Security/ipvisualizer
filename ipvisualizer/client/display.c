@@ -68,6 +68,7 @@ int mapping = 2;
 int pausedisplay = 0;
 int displayrules = 1;
 int sock = 0;
+int verbose = 0;
 
 struct timeval inittime;
 volatile int die=0;
@@ -134,6 +135,16 @@ void pulldata(char start);
  * */
 int main(int argc, char** argv)
 {
+	int i;
+	
+	/* Check for verbose flag */
+	for (i = 1; i < argc; i++) {
+		if (!strcmp(argv[i], "-v")) {
+			verbose = 1;
+			break;
+		}
+	}
+
 	/* load command line args to check for config file option */
 	config_loadargs(argc, argv);
 
@@ -153,7 +164,6 @@ int main(int argc, char** argv)
 #if HAVE_LIBAVCODEC && HAVE_LIBAVFORMAT && USE_FFMPEG == 1
 	videoinit();
 #endif
-	int i;
 	
 	struct hostent* he = gethostbyname(config_string(CONFIG_SERVER));
 	if (!he)
@@ -1328,39 +1338,23 @@ void updatesubnets(struct subnetpacket* sp)
 	int i;
 	int max = sp->count>MAXINDEX ? MAXINDEX : sp->count;
 	numsubnets = max;
-	printf("Total subnets received: %i\n", numsubnets);
-	printf("sp->base = 0x%08x, sp->mask = 0x%08x\n", sp->base, sp->mask);
+	printf("Received information about %i subnets\n", numsubnets);
 	
-	// Check for specific 144.39.192.0/18 subnet
-	int found_144_39_192 = 0;
-	printf("\nAll 144.39.x.x subnets received:\n");
 	for (i = 0; i < numsubnets; i++)
 	{
 		subnets[i].base = sp->subnets[i].base + sp->base;
 		subnets[i].mask = sp->subnets[i].mask;
 		
-		unsigned char a = (subnets[i].base >> 24) & 0xFF;
-		unsigned char b = (subnets[i].base >> 16) & 0xFF;
-		unsigned char c = (subnets[i].base >> 8) & 0xFF;
-		unsigned char d = subnets[i].base & 0xFF;
-		
-		// Check for 144.39.192.0/18
-		if (a == 144 && b == 39 && c == 192 && d == 0 && subnets[i].mask == 18) {
-			printf("*** FOUND 144.39.192.0/18 at index %d ***\n", i);
-			found_144_39_192 = 1;
-		}
-		
-		// List all 144.39.x.x subnets
-		if (a == 144 && b == 39) {
-			printf("  [%d] %u.%u.%u.%u/%u (base=0x%08x)\n", i, a, b, c, d, subnets[i].mask, subnets[i].base);
+		if (verbose) {
+			unsigned char a = (subnets[i].base >> 24) & 0xFF;
+			unsigned char b = (subnets[i].base >> 16) & 0xFF;
+			unsigned char c = (subnets[i].base >> 8) & 0xFF;
+			unsigned char d = subnets[i].base & 0xFF;
+			
+			printf("[%d] %u.%u.%u.%u/%u\n", i, a, b, c, d, subnets[i].mask);
 		}
 	}
 	
-	if (!found_144_39_192) {
-		printf("\n*** Subnet 144.39.192.0/18: NOT FOUND ***\n");
-	}
-	
-	printf("\nRecived information about %i subnets\n", numsubnets); 
 	/* redraw the subnet stuff */
 	initbuffer();
 }

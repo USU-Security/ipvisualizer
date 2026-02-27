@@ -64,6 +64,8 @@ int config_loadfile(const char* file)
 	char v[512];
 	char * pv;
 	FILE* f = fopen(file, "r");
+	if (!f)
+		return 0;
 	clearerr(f);
 	int ret = 0;
 	while (1 == fscanf(f, "%511s", k)) 
@@ -98,6 +100,12 @@ int config_loadargs(int argc, char** argv)
 	int ret =0;
 	for (i = 1; i < argc-1; i+=2)
 	{
+		/* Skip verbose flag */
+		if (!strcmp(argv[i], "-v")) {
+			i--;
+			continue;
+		}
+		
 		char* s = argv[i];
 		while (*s && *s == '-')
 			s++;
