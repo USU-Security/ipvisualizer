@@ -41,7 +41,7 @@ inline int vflowpacketsize(struct verbosefirewall* f)
 
 inline int subnetpacketsize(struct subnetpacket* s)
 {
-#ifdef VERBOSE_PACKET
+#ifdef VERBOSE_FIREWALL
 	return(2*sizeof(unsigned short) + 2*sizeof(unsigned int) + sizeof(subnetword) * s->count);
 #else
 	return(2*sizeof(unsigned short) + sizeof(subnetword) * s->count);

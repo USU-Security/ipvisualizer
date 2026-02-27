@@ -426,19 +426,29 @@ int main(int argc, char* argv[])
 		numsubnets = MAXINDEX;
 
 	j = 0;
+	printf("DEBUG: localip=0x%08x localmask=0x%08x\n", localip, localmask);
 	for (i = 0; i < numsubnets; i++) {
+		unsigned char a = (subarray[i].base >> 24) & 0xFF;
+		unsigned char b = (subarray[i].base >> 16) & 0xFF;
+		unsigned char c = (subarray[i].base >> 8) & 0xFF;
+		unsigned char d = subarray[i].base & 0xFF;
+		printf("DEBUG: Checking subnet %d: %u.%u.%u.%u/%d (0x%08x & 0x%08x = 0x%08x, localip=0x%08x) ", 
+			i, a, b, c, d, subarray[i].mask, subarray[i].base, localmask, (subarray[i].base & localmask), localip);
 		/* only report the subnets if they are within our range */
 		if ((subarray[i].base & localmask) == localip) {
+			printf("PASS\n");
 			/*mask off the subnets according to our local mask, since /16 is limit*/
 			subnets->subnets[j].base = subarray[i].base & ~localmask;
 			subnets->subnets[j].mask = subarray[i].mask;
 			j++;
+		} else {
+			printf("FAIL\n");
 		}
 	}
 	subnets->count = j;
 	subnets->base = localip;
 	subnets->mask = localmask;
-	printf("Recieved information about %i subnets\n", numsubnets);
+	printf("Recieved information about %i subnets, %i passed filter\n", numsubnets, j);
 /*
 	firewallrules = getfwrules("singsing.usu.edu", "/admin/firewall/currentrules.php?f=1", fwruleauthorization, &numfwrules);
 
