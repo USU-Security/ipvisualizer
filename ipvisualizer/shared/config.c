@@ -37,10 +37,11 @@ const char * validopts[MAXOPTS][2] = {
 	{"c", "configfile"},
 	{"e", "leftclickcmd"},
 	{"r", "rightclickcmd"},
-	{"n", "rightclicknet"}
+	{"n", "rightclicknet"},
+	{"b", "blocknet"}
 };
 
-const char* config_opts[] = {0, STRPORT, 0, 0, 0, 0, 0, 0, 0};
+const char* config_opts[] = {0, STRPORT, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0};
 int optcount = 0;
 
 

@@ -67,6 +67,44 @@
 
 unsigned long long lastupdate = 0;
 
+/* blocked remote subnets: incoming traffic from these external sources is suppressed */
+typedef struct {
+	unsigned int base;
+	unsigned int mask;
+} blocked_subnet;
+
+#define MAX_BLOCKED_SUBNETS 64
+blocked_subnet blocked_subnets[MAX_BLOCKED_SUBNETS];
+int num_blocked_subnets = 0;
+
+static int ip_is_blocked(unsigned int ip)
+{
+	int i;
+	for (i = 0; i < num_blocked_subnets; i++)
+		if ((ip & blocked_subnets[i].mask) == blocked_subnets[i].base)
+			return 1;
+	return 0;
+}
+
+/* parse a comma-separated list of CIDR blocks, e.g. "1.2.3.0/24,5.6.7.0/16" */
+static void parse_blocked_subnets(const char* s)
+{
+	while (s && *s && num_blocked_subnets < MAX_BLOCKED_SUBNETS) {
+		int a, b, c, d, prefix;
+		if (sscanf(s, "%d.%d.%d.%d/%d", &a, &b, &c, &d, &prefix) == 5) {
+			unsigned int ip = ((unsigned int)a << 24) | ((unsigned int)b << 16)
+			                | ((unsigned int)c << 8) | (unsigned int)d;
+			unsigned int mask = prefix ? (~0u << (32 - prefix)) : 0u;
+			blocked_subnets[num_blocked_subnets].base = ip & mask;
+			blocked_subnets[num_blocked_subnets].mask = mask;
+			printf("Blocking incoming traffic from %d.%d.%d.%d/%d\n", a, b, c, d, prefix);
+			num_blocked_subnets++;
+		}
+		s = strchr(s, ',');
+		if (s) s++;
+	}
+}
+
 struct packetheader flowbuffer;
 struct flowpacket *buffer;
 struct subnetpacket* subnets;
@@ -139,6 +177,9 @@ void report(unsigned int src, unsigned int dst, unsigned short size, enum packet
 	}
 	else if ((dst & localmask) == localip)
 	{
+		/* incoming traffic: src is the remote end — filter if blocked */
+		if (ip_is_blocked(src))
+			return;
 		buffer->data[buffer->count].incoming = 1;
 		buffer->data[buffer->count].local = dst & ~localmask;
 	}
@@ -400,6 +441,9 @@ int main(int argc, char* argv[])
 
 	/* these are loaded from the config, so must happen afterwards */
 	initglobals();
+
+	if (config_string(CONFIG_BLOCKNET))
+		parse_blocked_subnets(config_string(CONFIG_BLOCKNET));
 	char ebuff[PCAP_ERRBUF_SIZE];
 	subnet subarray[MAXINDEX];
 	unsigned int i, j;
