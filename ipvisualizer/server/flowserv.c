@@ -173,16 +173,24 @@ void report(unsigned int src, unsigned int dst, unsigned short size, enum packet
 	if ((src & localmask) == localip)
 	{
 		/* outgoing traffic: dst is the remote end — filter if blocked */
-		if (ip_is_blocked(dst))
+		if (ip_is_blocked(dst)) {
+			printf("BLOCK outgoing: %u.%u.%u.%u -> %u.%u.%u.%u\n",
+				(src>>24)&0xff, (src>>16)&0xff, (src>>8)&0xff, src&0xff,
+				(dst>>24)&0xff, (dst>>16)&0xff, (dst>>8)&0xff, dst&0xff);
 			return;
+		}
 		buffer->data[buffer->count].incoming = 0;
 		buffer->data[buffer->count].local = src & ~localmask;
 	}
 	else if ((dst & localmask) == localip)
 	{
 		/* incoming traffic: src is the remote end — filter if blocked */
-		if (ip_is_blocked(src))
+		if (ip_is_blocked(src)) {
+			printf("BLOCK incoming: %u.%u.%u.%u -> %u.%u.%u.%u\n",
+				(src>>24)&0xff, (src>>16)&0xff, (src>>8)&0xff, src&0xff,
+				(dst>>24)&0xff, (dst>>16)&0xff, (dst>>8)&0xff, dst&0xff);
 			return;
+		}
 		buffer->data[buffer->count].incoming = 1;
 		buffer->data[buffer->count].local = dst & ~localmask;
 	}
