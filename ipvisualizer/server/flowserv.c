@@ -172,6 +172,9 @@ void flushbuffer() {
 void report(unsigned int src, unsigned int dst, unsigned short size, enum packettype pt) {
 	if ((src & localmask) == localip)
 	{
+		/* outgoing traffic: dst is the remote end — filter if blocked */
+		if (ip_is_blocked(dst))
+			return;
 		buffer->data[buffer->count].incoming = 0;
 		buffer->data[buffer->count].local = src & ~localmask;
 	}
